@@ -4,6 +4,7 @@ An interactive 3D explainer for WordPress core. One page visit is a metro journe
 
 - **Design record:** [`docs/design.md`](docs/design.md)
 - **Locked visual system:** [`docs/design-system.md`](docs/design-system.md)
+- **Where the WordPress facts come from:** [`docs/data-pipeline.md`](docs/data-pipeline.md)
 - **Throwaway design rounds:** `explorations/` (served as static HTML, not part of the build)
 
 ## Stack
@@ -28,15 +29,19 @@ pnpm dev           # http://localhost:3000
 | `pnpm test` / `pnpm test:coverage`                   | Unit tests (Vitest); coverage gate is 80% on `src/lib`                                   |
 | `pnpm test:e2e`                                      | Playwright smoke and accessibility tests against a production build (`pnpm build` first) |
 | `pnpm check`                                         | Everything CI runs, except e2e                                                           |
+| `pnpm wp-data <x.y>`                                 | Trace a WordPress version in Playground and regenerate `content/versions/<x.y>`          |
 
 ## Project layout
 
 ```
 src/app/               routes, layout, fonts
 src/components/three/  the 3D stage (client-only, loaded after the text paints)
-src/lib/               pure, tested logic: story timeline, transit geometry, metro map data
+src/lib/               pure, tested logic: story timeline, transit geometry, metro map data, WordPress data
+content/versions/      generated WordPress data, one folder per version (pnpm wp-data)
+tools/wp-data/         the data pipeline: tracer, Playground blueprints, demo fixtures
 src/styles/tokens.css  design tokens (source of truth: docs/design-system.md)
 tests/e2e/             Playwright
+tests/data/            integrity tests for the generated WordPress data
 explorations/          throwaway design mockups
 ```
 
