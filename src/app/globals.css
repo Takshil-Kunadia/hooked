@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+/*
+ * Tailwind reads the design tokens below. The source of truth for every value
+ * is docs/design-system.md; change tokens there first, then here.
+ */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --color-accent: var(--accent);
+  --color-core: var(--core);
+  --color-plugin: var(--plugin);
+  --color-theme: var(--theme);
+  --color-mu: var(--mu);
+  --color-dropin: var(--dropin);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-instrument-serif);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-hud: var(--font-departure-mono);
+  --font-hand: var(--font-caveat);
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.hero-accent {
+  padding-right: 0.08em;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Windows high-contrast mode can't paint gradient text: fall back to a system colour. */
+@media (forced-colors: active) {
+  .hero-accent {
+    background: none;
+    color: CanvasText;
+  }
+}
