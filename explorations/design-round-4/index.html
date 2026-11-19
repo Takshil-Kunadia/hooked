@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="en" data-tile="day" data-font="inter">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Hooked: Design Round 4</title>
+<meta name="description" content="Throwaway design exploration, round 3: the metro-line world." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:opsz,wght@14..32,400..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  @font-face { font-family: "Departure Mono"; src: url("https://cdn.jsdelivr.net/gh/rektdeckard/departure-mono@main/public/assets/DepartureMono-Regular.woff2") format("woff2"); font-display: swap; }
+  :root {
+    --bg: #f5f5f7; --text: #1d1d1f; --text-2: #3a3a3c; --muted: #6e6e73; --hairline: rgba(0,0,0,.1);
+    --panel: rgba(255,255,255,.8); --panel-strong: rgba(255,255,255,.96); --accent: #3858e9;
+    --core: #8fa8ff; --plugin: #b79cf2; --theme: #7fd8b9; --mu: #f0cf6a; --dropin: #f29a88;
+    --board: #121419; --board-text: #f2f3f5; --board-dim: #8a8f98; --led: #ffd36b; --ok: #7fd8a0;
+    --font-display: "Inter", system-ui, sans-serif; --font-serif: "Instrument Serif", Georgia, serif;
+    --font-code: "JetBrains Mono", ui-monospace, monospace; --font-hud: "Departure Mono", "JetBrains Mono", ui-monospace, monospace;
+    --font-hand: "Caveat", "Comic Sans MS", cursive;
+  }
+  html[data-font="geist"] { --font-display: "Geist", system-ui, sans-serif; }
+  html[data-tile="dusk"] {
+    --bg: #0e1117; --text: #f5f5f7; --text-2: #c9ccd3; --muted: #8f949d; --hairline: rgba(255,255,255,.12);
+    --panel: rgba(18,22,30,.78); --panel-strong: rgba(20,24,33,.96); --accent: #8aa4ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); transition: background-color .6s, color .6s; }
+  body { font-family: var(--font-display); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overflow-x: hidden; }
+  ::selection { background: var(--accent); color: #fff; }
+  button { font: inherit; }
+
+  #stage { position: fixed; top: 0; left: 0; width: 100vw; height: 100lvh; display: block; z-index: 0; transition: opacity .6s; }
+  .scrim {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .5s;
+    background: linear-gradient(90deg, var(--bg) 0%, var(--bg) 36%, color-mix(in srgb, var(--bg) 78%, transparent) 47%, transparent 62%);
+  }
+  .scrim.on { opacity: 1; }
+  #hud { position: fixed; inset: 0; z-index: 3; pointer-events: none; transition: opacity .5s; }
+  .pill {
+    position: absolute; transform: translate(-50%, calc(-100% - 14px)); font-family: var(--font-code); font-size: 13px; padding: 6px 12px;
+    border-radius: 999px; background: var(--panel-strong); color: var(--text); white-space: nowrap; border: 1px solid var(--hairline);
+    box-shadow: 0 6px 20px rgba(0,0,0,.08); transition: opacity .3s;
+  }
+  .pill .pulse { display: inline-block; animation: tick .45s ease-out; }
+  .pill.announce { background: var(--accent); color: #fff; border-color: transparent; font-family: var(--font-display); font-weight: 600; }
+  @keyframes tick { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* departure board + cargo manifest: same transit board, dark in both tiles for contrast */
+  .board {
+    position: absolute; right: clamp(16px, 4vw, 64px); bottom: 10svh; width: min(500px, 42vw); background: var(--board); color: var(--board-text);
+    border-radius: 18px; padding: 14px 16px 12px; font-family: var(--font-hud); box-shadow: 0 18px 50px rgba(0,0,0,.22);
+    opacity: 0; transform: translateY(10px); transition: opacity .35s, transform .35s; pointer-events: none;
+  }
+  .board.on { opacity: 1; transform: none; pointer-events: auto; }
+  .board .title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--led); margin-bottom: 8px; }
+  .board .title span:last-child { color: var(--board-dim); }
+  .board .cols, .board .row { display: grid; grid-template-columns: 4.6em minmax(0, 1fr) 5.4em 6.2em; gap: 10px; align-items: center; }
+  .board .cols { font-size: 10px; letter-spacing: .08em; color: var(--board-dim); padding: 0 6px 6px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 4px; }
+  .board .row { padding: 5px 6px; border-radius: 7px; font-size: 12.5px; cursor: help; transition: background-color .2s; }
+  .board .row:hover, .board .row.hl { background: rgba(255,255,255,.08); }
+  .board .tk { color: var(--led); font-size: 16px; }
+  .board .nm { font-family: var(--font-code); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .board .fr { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; }
+  .board .fr.core { color: var(--core); } .board .fr.plugin { color: var(--plugin); } .board .fr.theme { color: var(--theme); }
+  .board .st { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--board-dim); text-align: right; }
+  .board .row.now .st { color: var(--led); animation: blink 1s steps(2) infinite; }
+  .board .row.done .st { color: var(--ok); }
+  .board .row.now { background: rgba(255,211,107,.1); }
+  @keyframes blink { 50% { opacity: .35; } }
+  .board .val { grid-column: 2 / 5; font-family: var(--font-code); font-size: 12px; color: var(--board-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -2px; }
+  .board .row.done .val { color: var(--board-text); }
+  .board mark { background: rgba(255,211,107,.28); color: var(--led); border-radius: 3px; padding: 0 1px; }
+  .board .foot { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,.14); font-family: var(--font-code); font-size: 12.5px; color: var(--board-dim); }
+  .board .foot b { color: var(--ok); font-weight: 500; }
+
+  .card {
+    position: fixed; z-index: 9; width: min(350px, calc(100vw - 24px)); padding: 16px 18px 14px; border-radius: 18px; background: var(--panel-strong); color: var(--text);
+    border: 1px solid var(--hairline); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: 0 16px 48px rgba(0,0,0,.16);
+    opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; pointer-events: none;
+  }
+  .card.on { opacity: 1; transform: none; } .card.pinned { pointer-events: auto; }
+  .card .name { font-family: var(--font-code); font-size: 15px; font-weight: 500; padding-right: 22px; word-break: break-word; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 6px 0 10px; font-family: var(--font-hud); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .card .what { font-size: 15px; line-height: 1.45; font-weight: 450; }
+  .card .ex { font-family: var(--font-code); font-size: 12.5px; margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: var(--hairline); }
+  .card .foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; font-family: var(--font-hud); font-size: 11px; color: var(--muted); }
+  .card a { color: var(--accent); text-decoration: none; } .card a:hover, .card a:focus-visible { text-decoration: underline; }
+  .card .close { position: absolute; top: 10px; right: 12px; display: none; appearance: none; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px; }
+  .card.pinned .close { display: block; }
+  .chip { font-family: var(--font-hud); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; color: #1d1d1f; }
+  .chip.core { background: var(--core); } .chip.plugin { background: var(--plugin); } .chip.theme { background: var(--theme); } .chip.station { background: var(--hairline); color: var(--text); }
+
+  header.bar { position: fixed; top: 14px; left: 16px; right: 16px; z-index: 7; display: flex; justify-content: space-between; align-items: center; gap: 12px; pointer-events: none; }
+  .logo { font-family: var(--font-hud); font-size: 14px; letter-spacing: .06em; pointer-events: auto; }
+  .logo span { color: var(--muted); }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; pointer-events: auto; }
+  .seg { display: inline-flex; align-items: center; padding: 3px; border-radius: 999px; background: var(--panel); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid var(--hairline); }
+  .seg .label { font-family: var(--font-hud); font-size: 10px; letter-spacing: .08em; color: var(--muted); padding: 0 8px 0 10px; text-transform: uppercase; }
+  .seg button { appearance: none; border: 0; background: transparent; cursor: pointer; font-family: var(--font-hud); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .rail { position: fixed; left: 20px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; flex-direction: column; gap: 4px; transition: opacity .5s; }
+  .rail button { position: relative; appearance: none; border: 0; background: transparent; cursor: pointer; height: 18px; width: 40px; display: flex; align-items: center; }
+  .rail button i { display: block; width: 10px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 70%, transparent); transition: width .3s, background .3s; }
+  .rail button.on i { width: 26px; background: var(--text); }
+  .rail button span { position: absolute; left: 40px; top: 50%; transform: translateY(-50%); font-family: var(--font-hud); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .rail button:hover span, .rail button:focus-visible span { opacity: 1; color: var(--text); background: var(--panel-strong); padding: 3px 8px; border-radius: 6px; }
+  .legend { position: fixed; left: 24px; bottom: 16px; z-index: 5; display: flex; gap: 14px; font-family: var(--font-hud); font-size: 11px; color: var(--muted); letter-spacing: .04em; transition: opacity .5s; }
+  .legend b { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .wpfooter { position: fixed; right: 18px; bottom: 16px; z-index: 5; font-family: var(--font-hud); font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+  .keyhint { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 5; font-family: var(--font-hud); font-size: 10.5px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; transition: opacity .5s; }
+  .keyhint kbd { font-family: inherit; border: 1px solid var(--hairline); border-radius: 5px; padding: 1px 5px; margin: 0 2px; }
+  .toast { position: fixed; left: 50%; top: 70px; z-index: 8; transform: translate(-50%, -8px); font-family: var(--font-code); font-size: 13px; padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--bg); opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  main { position: relative; z-index: 2; pointer-events: none; }
+  .act { position: relative; }
+  .pin { position: sticky; top: 0; height: 100svh; display: flex; align-items: center; padding: 0 6vw 0 clamp(80px, 9vw, 150px); }
+  .hero .pin { align-items: flex-end; padding-bottom: 11svh; }
+  .copy { max-width: 540px; pointer-events: auto; opacity: 0; will-change: opacity, transform; }
+  .hero .copy { max-width: 1180px; opacity: 1; }
+  .eyebrow { font-family: var(--font-hud); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 22px; }
+  h1 { font-size: clamp(38px, 6.2vw, 98px); line-height: .98; letter-spacing: -.038em; font-weight: 700; }
+  h2 { font-size: clamp(38px, 4.8vw, 74px); line-height: 1; letter-spacing: -.032em; font-weight: 700; margin-bottom: 26px; }
+  h1 em, h2 em, .serif-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: -.01em; padding-right: .08em; background: linear-gradient(92deg, #d98f69 0%, #a385e6 48%, #3858e9 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  html[data-tile="dusk"] h1 em, html[data-tile="dusk"] h2 em, html[data-tile="dusk"] .serif-accent { background-image: linear-gradient(92deg, #f2c1a4 0%, #cdb8ff 48%, #8aa4ff 100%); }
+  .lede { font-size: clamp(19px, 1.6vw, 25px); line-height: 1.38; color: var(--text-2); margin-top: 24px; max-width: 38ch; font-weight: 500; letter-spacing: -.012em; }
+  .kicker { font-family: var(--font-hud); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin-bottom: 18px; }
+  .startlink { display: inline-flex; gap: 8px; align-items: center; margin-top: 30px; font-family: var(--font-hud); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); text-decoration: none; border: 1.5px solid currentColor; border-radius: 999px; padding: 9px 14px; }
+  code { font-family: var(--font-code); font-size: .8em; padding: .08em .38em; border-radius: 7px; background: var(--hairline); color: var(--text); }
+  [data-card] { cursor: help; }
+  code[data-card] { border-bottom: 1.5px dashed var(--accent); border-radius: 7px 7px 0 0; }
+
+  ol.beats { list-style: none; display: grid; gap: 16px; }
+  ol.beats li { position: relative; padding-left: 40px; font-size: clamp(18px, 1.35vw, 21px); line-height: 1.45; color: var(--muted); font-weight: 500; letter-spacing: -.012em; transition: color .3s; }
+  ol.beats li b { color: var(--muted); font-weight: 600; transition: color .3s; }
+  ol.beats li::before { content: attr(data-n); position: absolute; left: 0; top: .15em; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-hud); font-size: 11px; border: 1.5px solid var(--muted); color: var(--muted); }
+  ol.beats li.on { color: var(--text-2); }
+  ol.beats li.on b { color: var(--text); }
+  ol.beats li.on::before { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .note { display: flex; gap: 10px; align-items: flex-start; margin-top: 22px; font-family: var(--font-hand); font-size: 26px; line-height: 1.1; color: var(--accent); transform: rotate(-2.2deg); transform-origin: left; opacity: 0; transition: opacity .4s; }
+  .note.on { opacity: 1; }
+  .note svg path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .hint { font-family: var(--font-hud); font-size: 11.5px; letter-spacing: .04em; color: var(--accent); margin-top: 18px; }
+  .on-touch { display: none; }
+  @media (hover: none) { .on-hover { display: none; } .on-touch { display: inline; } }
+  .titlebug { font-family: var(--font-hud); font-size: 12px; color: #c4452f; margin-top: 14px; display: none; }
+  .titlebug.on { display: block; }
+  .apple { font-size: clamp(19px, 1.5vw, 23px); line-height: 1.42; color: var(--text-2); font-weight: 500; letter-spacing: -.014em; }
+  .apple b { color: var(--text); font-weight: 600; }
+
+  .tile { position: relative; z-index: 2; background: var(--bg); padding: 120px clamp(20px, 8vw, 150px) 160px; transition: background-color .6s; }
+  .tile h3 { font-family: var(--font-hud); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 56px 0 18px; font-weight: 400; }
+  .tile .title { font-size: clamp(40px, 5vw, 76px); letter-spacing: -.03em; font-weight: 700; line-height: 1; }
+  .changes { display: grid; gap: 10px; max-width: 780px; font-size: 17px; line-height: 1.5; color: var(--text-2); font-weight: 500; }
+  .changes b { color: var(--text); font-weight: 600; }
+  .vocab { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .vocab div { background: var(--panel); border: 1px solid var(--hairline); border-radius: 14px; padding: 12px 14px; font-size: 15px; line-height: 1.4; color: var(--text-2); }
+  .vocab b { display: block; font-family: var(--font-code); font-size: 12.5px; color: var(--text); margin-bottom: 4px; font-weight: 500; }
+
+  .no-webgl #stage, .no-webgl #hud { display: none; }
+  .no-webgl .copy { opacity: 1 !important; visibility: visible !important; }
+
+  @media (min-width: 761px) and (max-width: 1180px) and (orientation: landscape) {
+    .pin { padding-left: 72px; } .copy { max-width: 42vw; } .rail button span { display: none; } .board { width: min(430px, 46vw); }
+  }
+  @media (min-width: 1800px) { .pin { padding-left: 9vw; } .copy { max-width: 580px; } }
+  @media (max-width: 760px), (orientation: portrait) and (max-width: 1180px) {
+    .pin { padding: 0 12px calc(12px + env(safe-area-inset-bottom)); align-items: flex-end; }
+    .hero .pin { padding: 0 16px 9svh; }
+    .copy { max-width: none; width: 100%; background: var(--panel-strong); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); padding: 18px 18px 20px; border-radius: 24px; border: 1px solid var(--hairline); }
+    .hero .copy { background: transparent; border: 0; padding: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    h2 { font-size: clamp(30px, 8vw, 52px); margin-bottom: 12px; }
+    ol.beats li { display: none; font-size: 17px; } ol.beats li.on { display: block; }
+    .note { font-size: 19px; margin-top: 10px; }
+    .act:not(.hero) .kicker, .hint { display: none; }
+    .rail, .legend, .seg .label, .logo span, .scrim, .keyhint, .wpfooter { display: none; }
+    #hud { z-index: 1; }
+    .copy .board { position: static; width: auto; margin-top: 12px; padding: 10px 12px; transform: none; box-shadow: none; }
+    .copy .board:not(.on) { display: none; }
+    .board .cols, .board .row { grid-template-columns: 3.9em minmax(0, 1fr) 4.6em 5.4em; gap: 6px; }
+    .board .row { font-size: 11px; padding: 3px 4px; } .board .tk { font-size: 13px; }
+    header.bar { align-items: flex-start; } .controls { gap: 6px; } .seg button { padding: 6px 9px; font-size: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<!--
+  ╭───────────────────────────────────────────────╮
+  │  hooked · design round 3 · metro line         │
+  │  Throwaway mockup. Try wp.hooks in the console│
+  ╰───────────────────────────────────────────────╯
+-->
+<canvas id="stage" aria-hidden="true"></canvas>
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<div id="hud">
+  <div class="pill" id="train-pill"><span class="pulse">GET /hello-world/</span></div>
+  <div class="pill announce" id="announce-pill" style="opacity:0">📢 “Now arriving: init!”</div>
+
+  <div class="board" id="departures" aria-label="Departure board for the init platform">
+    <div class="title"><span>Platform · init</span><span id="dep-status">train approaching</span></div>
+    <div class="cols"><span>TICKET</span><span>LISTENER</span><span>FROM</span><span style="text-align:right">STATUS</span></div>
+    <div id="dep-rows"></div>
+  </div>
+  <div class="board" id="manifest" aria-label="Cargo manifest for the the_title workshop">
+    <div class="title"><span>Cargo manifest · the_title</span><span id="man-status">arriving</span></div>
+    <div class="cols"><span>TICKET</span><span>STATION</span><span>FROM</span><span style="text-align:right">STATUS</span></div>
+    <div id="man-rows"></div>
+    <div class="foot" id="man-foot"></div>
+  </div>
+</div>
+<div class="card" id="card" role="dialog" aria-live="polite" aria-label="Details"><button class="close" type="button" aria-label="Close details">×</button><div class="body"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<header class="bar">
+  <div class="logo">hooked<span>/design-round-4 · metro</span></div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Style tile"><span class="label">Tile</span><button type="button" data-tile="day" aria-pressed="true">Porcelain Day</button><button type="button" data-tile="dusk" aria-pressed="false">Dusk Core</button></div>
+    <div class="seg" role="group" aria-label="Display typeface"><span class="label">Type</span><button type="button" data-font="inter" aria-pressed="true">Inter</button><button type="button" data-font="geist" aria-pressed="false">Geist</button></div>
+    <div class="seg" role="group" aria-label="Ambient occlusion"><span class="label">Soft AO</span><button type="button" data-ao="on" aria-pressed="true">On</button><button type="button" data-ao="off" aria-pressed="false">Off</button></div>
+  </div>
+</header>
+<nav class="rail" id="rail" aria-label="Story steps"></nav>
+<div class="legend" id="legend" aria-label="Color legend"><span><b style="background:var(--core)"></b>core</span><span><b style="background:var(--plugin)"></b>plugin</span><span><b style="background:var(--theme)"></b>theme</span></div>
+<div class="keyhint" id="keyhint"><kbd>↓</kbd><kbd>↑</kbd> next / previous stop</div>
+<div class="wpfooter" id="wpfooter">0 hooks fired · 0 queries · 0.000s</div>
+
+<main>
+  <section class="act hero" data-act="hero" data-beats="[0,1]" data-labels='["your browser"]' style="height: 160svh">
+    <div class="pin"><div class="copy">
+      <p class="eyebrow">Chapter 1 · The journey of a request</p>
+      <h1 id="hero-title">What happens when you visit a <em>WordPress</em> site?</h1>
+      <p class="titlebug" id="titlebug">⚠ your filter returned nothing, so the title is gone. That's the #1 filter bug.</p>
+      <p class="lede">Every page visit is a trip. Ride along with one request as it travels through WordPress, stop by stop, and comes back as a web page.</p>
+      <a class="startlink" href="#" onclick="return false">New to websites? Start at Stop 0 →</a>
+    </div></div>
+  </section>
+
+  <section class="act" data-act="init" data-beats="[0,0.34,0.67,1]" data-labels='["arrive at init","the announcement","listeners take turns"]' style="height: 330svh">
+    <div class="pin"><div class="copy">
+      <p class="kicker">STOP 4 · init · do_action( 'init' )</p>
+      <h2>This is an <em>action.</em></h2>
+      <ol class="beats">
+        <li data-beat="0"><b>The train pulls into <code data-card="init" tabindex="0">init</code>.</b> By now WordPress has loaded your plugins and theme, and it knows who the visitor is.</li>
+        <li data-beat="1"><b>WordPress makes an announcement.</b> Think of a town-hall bell: <code>do_action( 'init' )</code> calls out “init is happening now!” to everyone who signed up with <code>add_action</code>.</li>
+        <li data-beat="2"><b>Each listener takes its turn, by ticket number.</b> The ticket is the <em style="font-style:normal">priority</em>: lowest goes first. Actions don't hand anything back. Each listener just does its job.</li>
+      </ol>
+      <div class="note" id="note-init"><svg width="46" height="40" viewBox="0 0 46 40" aria-hidden="true"><path d="M4 6 C 18 4, 30 12, 36 30 M36 30 l-9 -4 M36 30 l2 -9" /></svg><span>Same ticket number?<br />First in line goes first.</span></div>
+      <p class="hint"><span class="on-hover">Hover a ticket, a station or a board row for details · click to pin</span><span class="on-touch">Tap a ticket, station or row for details</span></p>
+    </div></div>
+  </section>
+
+  <section class="act" data-act="title" data-beats="[0,0.2,0.4,0.6,0.8,1]" data-labels='["the_title workshop","wptexturize","capital_P_dangit","plugin station","value rolls out"]' style="height: 520svh">
+    <div class="pin"><div class="copy">
+      <p class="kicker">STOP 7 · the_title · apply_filters( 'the_title', $title )</p>
+      <h2>This is a <em>filter.</em></h2>
+      <ol class="beats">
+        <li data-beat="0"><b>The train carries a value.</b> Before your theme prints a post title, the title rides through the <code data-card="the_title" tabindex="0">the_title</code> workshop.</li>
+        <li data-beat="1"><b><code data-card="wptexturize" tabindex="0">wptexturize</code> polishes the typography.</b> The straight apostrophe in isn't becomes a curly one: isn’t.</li>
+        <li data-beat="2"><b><code data-card="capital_P_dangit" tabindex="0">capital_P_dangit</code> fixes the spelling.</b> “Wordpress” becomes “WordPress”. Yes, core really does this.</li>
+        <li data-beat="3"><b>A plugin adds its own touch.</b> Every station gets the latest value, changes it (or not) and must hand it back.</li>
+        <li data-beat="4"><b>The finished value rolls out.</b> That's what your theme prints.</li>
+      </ol>
+      <div class="note" id="note-title"><svg width="46" height="40" viewBox="0 0 46 40" aria-hidden="true"><path d="M4 6 C 18 4, 30 12, 36 30 M36 30 l-9 -4 M36 30 l2 -9" /></svg><span>Forget to hand it back<br />and the next station gets nothing (null).</span></div>
+    </div></div>
+  </section>
+
+  <section class="act" data-act="end" data-beats="[0,1]" data-labels='["200 OK"]' style="height: 160svh">
+    <div class="pin"><div class="copy">
+      <p class="kicker">STOP 8 · 200 OK · BACK HOME</p>
+      <h2>That's round <em>four.</em></h2>
+      <p class="apple"><b>Same story, a cleaner map.</b> Typography printed on the map instead of signposts, transit markers, ticket passes and portals. Scroll back up and hover anything.</p>
+    </div></div>
+  </section>
+</main>
+
+<section class="tile" id="tile">
+  <p class="eyebrow">Style tile · round 4</p>
+  <p class="title">The <span class="serif-accent">Metro</span> line</p>
+  <h3>What changed since round 3</h3>
+  <div class="changes">
+    <div><b>No signposts.</b> Station names are printed on the map, tilted slightly toward you. The hero shows only station names, and the extra labels appear only at the stop they belong to.</div>
+    <div><b>A crisp line.</b> An extruded, flat-topped ribbon with rounded ends replaces the soft tube.</div>
+    <div><b>Transit markers.</b> White pills with an ink outline, like a real metro map. The current hook's station is outlined in blue.</div>
+    <div><b>Ticket passes.</b> Listeners are upright passes showing their priority. On their turn, a pass lifts and flips to its colour with a check mark.</div>
+    <div><b>Portals and a data vault.</b> The workshop gantries are arches with a glowing rim, and the depot is a porcelain vault with light slits.</div>
+  </div>
+  <h3>Prop vocabulary (one prop per idea, every chapter)</h3>
+  <div class="vocab">
+    <div><b>request</b>the train, with its cargo shown above it</div>
+    <div><b>core files / stages</b>stations with real file-name signs</div>
+    <div><b>action</b>a station announcement (a town-hall bell)</div>
+    <div><b>callbacks</b>ticket passes queued on the platform</div>
+    <div><b>priority</b>ticket numbers, lowest first</div>
+    <div><b>filter</b>a workshop: gantries that change the cargo</div>
+    <div><b>logs</b>the departure board and the cargo manifest</div>
+    <div><b>plugins / theme</b>feeder lines joining at wp-settings</div>
+    <div><b>database</b>the depot</div>
+    <div><b>template hierarchy</b>a junction picking a platform</div>
+    <div><b>entry points</b>other lines merging into the trunk</div>
+    <div><b>response</b>arriving back at your browser · 200 OK</div>
+  </div>
+</section>
+
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+<script type="module">
+  import * as THREE from "three";
+  import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+  import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+  import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+  import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+  import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+  import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+  import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+  /* ============================== utilities ============================== */
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => [...document.querySelectorAll(s)];
+  const params = new URLSearchParams(location.search);
+  const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const STACKED_QUERY = matchMedia("(max-width: 760px), (orientation: portrait) and (max-width: 1180px)");
+  const isStacked = () => STACKED_QUERY.matches;
+  const layoutMode = () => (isStacked() ? "stacked" : innerWidth <= 1180 ? "tablet" : innerWidth >= 1800 ? "wide" : "desktop");
+  const clamp01 = (x) => Math.min(1, Math.max(0, x));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  function diffMark(prev, next) {
+    let a = 0; while (a < prev.length && a < next.length && prev[a] === next[a]) a++;
+    let b = 0; while (b < prev.length - a && b < next.length - a && prev[prev.length - 1 - b] === next[next.length - 1 - b]) b++;
+    return `${esc(next.slice(0, a))}<mark>${esc(next.slice(a, next.length - b))}</mark>${esc(next.slice(next.length - b))}`;
+  }
+
+  /* ============================== content (draft, accuracy-reviewed later) ============================== */
+  const REF = (kind, name) => `https://developer.wordpress.org/reference/${kind}/${name.toLowerCase()}/`;
+  const SRC = (file) => `https://github.com/WordPress/WordPress/blob/7.1-branch/${file}`;
+  const CATALOG = {
+    browser: { kind: "Station", tag: "start & finish", what: "Where every trip starts and ends. Your browser asks a server for a page (the request), then waits for HTML to come back." },
+    "index.php": { kind: "Station · file", tag: "front door", what: "The front door. Every visit to the front of a WordPress site starts by running index.php, which loads the rest of WordPress.", docs: SRC("index.php"), docsLabel: "Source ↗" },
+    "wp-config.php": { kind: "Station · file", tag: "control room", what: "The control room. It holds the database name and password, the secret keys and settings like WP_DEBUG. It's the file site owners are expected to edit.", docs: "https://developer.wordpress.org/advanced-administration/wordpress/wp-config/" },
+    "wp-settings.php": { kind: "Station · file", tag: "interchange", what: "The big interchange where WordPress wakes up. It loads core, then must-use plugins, then your plugins, then your theme, before announcing init.", docs: SRC("wp-settings.php"), docsLabel: "Source ↗" },
+    plugins: { kind: "Feeder line", tag: "plugins board here", what: "Your active plugins board at wp-settings.php. They load before init, which is why plugins can add_action( 'init', … ) in time." },
+    theme: { kind: "Feeder line", tag: "theme boards here", what: "Your theme boards at wp-settings.php too. Its functions.php runs (child theme first, then parent) before init." },
+    init: { kind: "Action hook", tag: "station announcement", what: "Fires after WordPress has finished loading but before any headers are sent. Most plugins register post types, taxonomies, shortcodes and blocks here.", example: "add_action( 'init', 'my_plugin_setup' );", docs: REF("hooks", "init") },
+    WP_Query: { kind: "Station · class", tag: "the depot", what: "Fetches the posts for this page from the database. The depot is where the train picks up its content.", docs: REF("classes", "WP_Query") },
+    database: { kind: "Depot", tag: "database", what: "Where WordPress stores posts, pages, settings and users, usually in MySQL or MariaDB." },
+    template: { kind: "Junction", tag: "template hierarchy", what: "Picks which theme file builds the page. Signals check templates from most specific to least, and the first one that exists wins.", docs: "https://developer.wordpress.org/themes/basics/template-hierarchy/" },
+    the_title: { kind: "Filter hook", tag: "the workshop", what: "Filters a post's title before it's shown. Themes pass every title they print through it, so plugins can change titles without editing the theme.", example: "add_filter( 'the_title', 'ucwords' );", docs: REF("hooks", "the_title") },
+    "200 OK": { kind: "Station", tag: "back home", what: "The finished HTML travels back to your browser. 200 OK is the HTTP status code for “here's your page”." },
+    train: { kind: "The request", tag: "your visit", what: "Your browser's request for /hello-world/. It rides through WordPress collecting what it needs, and comes back as a web page." },
+    create_initial_post_types: { kind: "Listener", origin: "core", priority: 0, hook: "init", what: "Registers WordPress's built-in post types, like posts, pages and attachments. Ticket 0 means it goes before anyone else.", docs: REF("functions", "create_initial_post_types") },
+    wp_widgets_init: { kind: "Listener", origin: "core", priority: 1, hook: "init", what: "Registers the default widgets, then makes its own announcement, widgets_init. A hook can trigger another hook.", docs: REF("functions", "wp_widgets_init") },
+    smilies_init: { kind: "Listener", origin: "core", priority: 5, hook: "init", what: "Builds the list of text smileys, like :) and ;-), that WordPress can turn into emoji.", docs: REF("functions", "smilies_init") },
+    rest_api_init: { kind: "Listener", origin: "core", priority: 10, hook: "init", what: "Registers the REST API's routes in the URL rules so /wp-json/ works. Not to be confused with the rest_api_init hook, which fires later.", docs: REF("functions", "rest_api_init") },
+    acme_register_cpt: { kind: "Listener", origin: "plugin", priority: 10, hook: "init", demo: true, what: "A demo plugin registering a “book” post type. Same ticket as rest_api_init, but it signed up later, so it goes after it.", example: "add_action( 'init', 'acme_register_cpt' );" },
+    mytheme_init: { kind: "Listener", origin: "theme", priority: 20, hook: "init", demo: true, what: "A demo theme doing its setup with ticket 20, after everyone holding 10." },
+    wptexturize: { kind: "Workshop station", origin: "core", priority: 10, hook: "the_title", what: "Swaps plain-text characters for proper typography: straight quotes become curly, -- becomes an en dash, ... becomes an ellipsis.", example: "isn't  →  isn’t", docs: REF("functions", "wptexturize") },
+    capital_P_dangit: { kind: "Workshop station", origin: "core", priority: 11, hook: "the_title", what: "Changes “Wordpress” to “WordPress”. Its docblock jokes that it exists to wipe the misspelling off the planet.", example: "Wordpress  →  WordPress", docs: REF("functions", "capital_P_dangit") },
+    acme_add_badge: { kind: "Workshop station", origin: "plugin", priority: 20, hook: "the_title", demo: true, what: "A demo plugin adding a ✦ to every title, after core's own stations.", example: "hard  →  hard ✦" },
+  };
+  const LISTENERS = ["create_initial_post_types", "wp_widgets_init", "smilies_init", "rest_api_init", "acme_register_cpt", "mytheme_init"];
+  const TITLE_IN = "Wordpress isn't hard";
+  const WORKSHOP = [
+    { name: "wptexturize", out: "Wordpress isn’t hard", x: 13.7 },
+    { name: "capital_P_dangit", out: "WordPress isn’t hard", x: 16.1 },
+    { name: "acme_add_badge", out: "WordPress isn’t hard ✦", x: 18.5 },
+  ];
+  const ORIGIN_HEX = { core: "#8FA8FF", plugin: "#B79CF2", theme: "#7FD8B9" };
+  const PALETTES = {
+    day: { bg: "#F5F5F7", fogNear: 50, fogFar: 110, table: "#FFFFFF", porcelain: "#F1EFEA", line: "#3858E9", lineGlow: 0, env: 0.85, key: 2.5, keyColor: "#ffffff", hemi: 0.55, shadow: 0.16, bloom: false, waiting: "#AEB3BE", ring: "#3858E9", head: 0.0 },
+    dusk: { bg: "#0E1117", fogNear: 40, fogFar: 95, table: "#161B24", porcelain: "#D7DCE5", line: "#5B79FF", lineGlow: 0.55, env: 0.3, key: 1.15, keyColor: "#A8BBFF", hemi: 0.22, shadow: 0.42, bloom: true, waiting: "#4C5466", ring: "#8AA4FF", head: 1.6 },
+  };
+  /* dist = camera distance to the subject, elev = degrees above the ground, shiftFrac = how far right of centre the subject sits */
+  const CAMERA = {
+    stacked: { dist: 31, elev: 46, shiftFrac: 0, lookY: -4.8, overview: { look: [-0.5, -9.5, 1], dist: 52, elev: 44 } },
+    tablet: { dist: 19.5, elev: 42, shiftFrac: 0.34, lookY: -0.9, overview: { look: [4.4, -6.5, 1], dist: 54, elev: 38 } },
+    desktop: { dist: 19, elev: 42, shiftFrac: 0.36, lookY: -1.0, overview: { look: [4.2, -6.8, 1], dist: 52, elev: 37 } },
+    wide: { dist: 17.5, elev: 41, shiftFrac: 0.38, lookY: -1.0, overview: { look: [4.4, -6.2, 1], dist: 47, elev: 36 } },
+  };
+
+  /* ============================== page hooks easter egg ============================== */
+  function createHooks(onFire) {
+    let registry = new Map(); let seq = 0, fired = 0; const listeners = new Set();
+    const list = (n) => registry.get(n) ?? [];
+    const notify = (n) => listeners.forEach((fn) => fn(n));
+    const api = {
+      addFilter(hookName, namespace, callback, priority = 10) {
+        if (typeof hookName !== "string" || typeof callback !== "function") throw new TypeError("addFilter(hookName, namespace, callback, priority?)");
+        registry = new Map(registry).set(hookName, [...list(hookName), { namespace: String(namespace), callback, priority: Number(priority) || 10, seq: seq++ }].sort((a, b) => a.priority - b.priority || a.seq - b.seq));
+        notify(hookName); return true;
+      },
+      addAction(...a) { return api.addFilter(...a); },
+      removeFilter(hookName, namespace) { const before = list(hookName); registry = new Map(registry).set(hookName, before.filter((h) => h.namespace !== namespace)); notify(hookName); return before.length - list(hookName).length; },
+      removeAction(...a) { return api.removeFilter(...a); },
+      applyFilters(hookName, value, ...args) { fired += 1; onFire(fired); return list(hookName).reduce((cur, h) => { try { return h.callback(cur, ...args); } catch (e) { console.error(`[hooked] ${hookName} (${h.namespace}) threw`, e); return cur; } }, value); },
+      doAction(hookName, ...args) { fired += 1; onFire(fired); list(hookName).forEach((h) => { try { h.callback(...args); } catch (e) { console.error(`[hooked] ${hookName} (${h.namespace}) threw`, e); } }); },
+      hasFilter(hookName) { return list(hookName).length > 0; },
+    };
+    return { api, subscribe: (fn) => listeners.add(fn) };
+  }
+  const t0 = performance.now(); let firstFrameSecs = null, firedCount = 0;
+  const renderFooter = (n = firedCount) => { firedCount = n; $("#wpfooter").textContent = `${n} hooks fired · 0 queries · ${(firstFrameSecs ?? (performance.now() - t0) / 1000).toFixed(3)}s`; };
+  const hooks = createHooks(renderFooter);
+  window.wp = Object.freeze({ hooks: hooks.api });
+  const HERO_DEFAULT = "What happens when you visit a WordPress site?";
+  function renderHeroTitle() {
+    const raw = hooks.api.applyFilters("hooked.heroTitle", HERO_DEFAULT);
+    const empty = raw === null || raw === undefined || String(raw).trim() === "";
+    $("#titlebug").classList.toggle("on", empty);
+    $("#hero-title").innerHTML = empty ? "∅" : esc(String(raw)).replace(/(wordpress)/i, "<em>$1</em>");
+  }
+  hooks.subscribe((n) => { if (n === "hooked.heroTitle") renderHeroTitle(); });
+  renderHeroTitle();
+  console.log("%c hooked %c This page runs on hooks too.\n\n  Try:  wp.hooks.addFilter( 'hooked.heroTitle', 'me', t => t.toUpperCase() )\n  Undo: wp.hooks.removeFilter( 'hooked.heroTitle', 'me' )\n", "background:#3858E9;color:#fff;padding:2px 6px;border-radius:4px;font-family:monospace", "font-family:monospace");
+  let toastTimer = 0;
+  function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("on"), 1800); }
+
+  /* ============================== cards ============================== */
+  const cardEl = $("#card"); const cardState = { pinned: false, name: null }; let highlighted = null;
+  function renderCard(name) {
+    const c = CATALOG[name];
+    const chips = [`<span>${esc(c.kind)}</span>`, c.origin ? `<span class="chip ${c.origin}">${c.origin}</span>` : (c.tag ? `<span class="chip station">${esc(c.tag)}</span>` : ""),
+      c.priority !== undefined ? `<span>ticket ${c.priority}</span>` : "", c.hook ? `<span>at ${esc(c.hook)}</span>` : "", c.demo ? `<span>· demo</span>` : ""].join("");
+    const foot = c.docs ? `<span>WordPress 7.1</span><a href="${esc(c.docs)}" target="_blank" rel="noopener noreferrer">${esc(c.docsLabel ?? "Official docs ↗")}</a>`
+      : c.demo ? `<span>Made up for this demo. Not in core.</span>` : `<span>Stop on the metro line</span>`;
+    cardEl.querySelector(".body").innerHTML = `<div class="name">${esc(name)}</div><div class="meta">${chips}</div><div class="what">${esc(c.what)}</div>${c.example ? `<div class="ex">${esc(c.example)}</div>` : ""}<div class="foot">${foot}</div>`;
+  }
+  function placeCard(x, y) {
+    const w = cardEl.offsetWidth, h = cardEl.offsetHeight, pad = 12;
+    let left = x + 18, top = y + 18;
+    if (left + w > innerWidth - pad) left = x - w - 18;
+    if (top + h > innerHeight - pad) top = y - h - 18;
+    cardEl.style.left = `${Math.max(pad, Math.min(left, innerWidth - w - pad))}px`;
+    cardEl.style.top = `${Math.max(pad, Math.min(top, innerHeight - h - pad))}px`;
+  }
+  function showCard(name, x, y, pin = false) {
+    if (!CATALOG[name] || (cardState.pinned && !pin)) return;
+    if (cardState.name !== name || pin) renderCard(name);
+    cardState.name = name; cardState.pinned = pin;
+    cardEl.classList.add("on"); cardEl.classList.toggle("pinned", pin);
+    placeCard(x, y); setHighlight(name);
+    if (pin) cardEl.querySelector("a, .close")?.focus({ preventScroll: true });
+  }
+  function hideCard(force = false) { if (cardState.pinned && !force) return; cardEl.classList.remove("on", "pinned"); cardState.pinned = false; cardState.name = null; setHighlight(null); }
+  function setHighlight(name) { highlighted = name; $$(".board .row").forEach((r) => r.classList.toggle("hl", r.dataset.card === name)); }
+  cardEl.querySelector(".close").addEventListener("click", () => hideCard(true));
+  addEventListener("keydown", (e) => { if (e.key === "Escape") hideCard(true); });
+  function bindCard(el, name) {
+    const at = () => { const r = el.getBoundingClientRect(); return [r.right, r.top]; };
+    el.addEventListener("mouseenter", () => showCard(name, ...at()));
+    el.addEventListener("mouseleave", () => hideCard());
+    el.addEventListener("focus", () => showCard(name, ...at()));
+    el.addEventListener("blur", () => hideCard());
+    el.addEventListener("click", (e) => { e.stopPropagation(); showCard(name, ...at(), true); });
+  }
+  document.addEventListener("click", (e) => { if (cardState.pinned && !cardEl.contains(e.target)) hideCard(true); });
+
+  /* ============================== boards ============================== */
+  $("#dep-rows").innerHTML = LISTENERS.map((n) => {
+    const c = CATALOG[n];
+    return `<div class="row" data-card="${n}"><span class="tk">${c.priority}</span><span class="nm">${esc(n)}</span><span class="fr ${c.origin}">${c.origin}${c.demo ? "*" : ""}</span><span class="st">waiting</span></div>`;
+  }).join("");
+  $("#man-rows").innerHTML = WORKSHOP.map((w, i) => {
+    const c = CATALOG[w.name], prev = i === 0 ? TITLE_IN : WORKSHOP[i - 1].out;
+    return `<div class="row" data-card="${w.name}"><span class="tk">${c.priority}</span><span class="nm">${esc(w.name)}</span><span class="fr ${c.origin}">${c.origin}${c.demo ? "*" : ""}</span><span class="st">ahead</span><span class="val">→ "${diffMark(prev, w.out)}"</span></div>`;
+  }).join("");
+  $$("[data-card]").forEach((el) => bindCard(el, el.dataset.card));
+
+  /* ============================== acts, beats, rail, snap ============================== */
+  const acts = $$("main .act").map((el) => ({ el, id: el.dataset.act, copy: el.querySelector(".copy"), beatEls: [...el.querySelectorAll("[data-beat]")], edges: JSON.parse(el.dataset.beats), labels: JSON.parse(el.dataset.labels), top: 0, span: 1, vis: -1, beat: -1 }));
+  acts.forEach((a) => a.beatEls.forEach((li, k) => { li.dataset.n = String(k + 1); }));
+  let beats = [];
+  function measure() {
+    acts.forEach((a) => { a.top = a.el.getBoundingClientRect().top + scrollY; a.span = Math.max(1, a.el.offsetHeight - innerHeight); });
+    beats = acts.flatMap((a, ai) => a.labels.map((label, k) => ({ act: a.id, ai, k, label, y: Math.round(a.top + (a.id === "hero" ? 0 : (a.edges[k] + a.edges[k + 1]) / 2) * a.span) })));
+  }
+  const rail = $("#rail");
+  function buildRail() {
+    rail.innerHTML = beats.map((b, i) => `<button type="button" data-i="${i}" aria-label="Go to stop: ${esc(b.label)}"><i></i><span>${esc(b.label)}</span></button>`).join("");
+    rail.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => goToBeat(Number(btn.dataset.i))));
+  }
+  const goToBeat = (i) => { const b = beats[Math.max(0, Math.min(beats.length - 1, i))]; if (b) scrollTo({ top: b.y, behavior: REDUCED_MOTION ? "auto" : "smooth" }); };
+  const nearestBeat = () => beats.reduce((best, b, i) => (Math.abs(b.y - scrollY) < Math.abs(beats[best].y - scrollY) ? i : best), 0);
+  const actProgress = (a, y = scrollY) => clamp01((y - a.top) / a.span);
+  /** current (act, beat) from scroll; between acts we hold the previous act's last beat */
+  function scrollBeat() {
+    const y = scrollY;
+    let held = { act: "hero", beat: 0, inAct: "hero" };
+    for (const a of acts) {
+      if (y < a.top - 1) break;
+      const inRange = y <= a.top + a.span + 1;
+      const p = actProgress(a, y);
+      let k = 0; for (let j = 0; j < a.edges.length - 1; j++) if (p >= a.edges[j]) k = j;
+      held = { act: a.id, beat: k, inAct: inRange ? a.id : null };
+    }
+    const last = acts[acts.length - 1];
+    if (y > last.top + last.span + innerHeight * 0.5) held.inAct = "tile";
+    return held;
+  }
+  let snapTimer = 0, pointerDown = false;
+  addEventListener("pointerdown", () => { pointerDown = true; });
+  addEventListener("pointerup", () => { pointerDown = false; });
+  addEventListener("scroll", () => {
+    clearTimeout(snapTimer);
+    if (REDUCED_MOTION || params.get("snap") === "off") return;
+    snapTimer = setTimeout(() => {
+      if (pointerDown) return;
+      const sb = scrollBeat(); if (sb.inAct === "tile") return;
+      const b = beats[nearestBeat()], d = b.y - scrollY;
+      if (Math.abs(d) > 2 && Math.abs(d) < innerHeight * 0.6) scrollTo({ top: b.y, behavior: "smooth" });
+    }, 160);
+  }, { passive: true });
+  addEventListener("keydown", (e) => {
+    if (e.target.closest?.("input, textarea, [contenteditable]")) return;
+    const down = ["ArrowDown", "PageDown"].includes(e.key) || (e.key === " " && !e.shiftKey);
+    const up = ["ArrowUp", "PageUp"].includes(e.key) || (e.key === " " && e.shiftKey);
+    if ((!down && !up) || scrollBeat().inAct === "tile") return;
+    e.preventDefault();
+    const cur = nearestBeat(), at = Math.abs(beats[cur].y - scrollY) < 4;
+    goToBeat(down ? (at || beats[cur].y < scrollY ? cur + 1 : cur) : (at || beats[cur].y > scrollY ? cur - 1 : cur));
+  });
+
+  /* ============================== controls ============================== */
+  const state = { tile: "day", ao: !isStacked() };
+  const pressGroup = (attr, value) => $$(`button[data-${attr}]`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset[attr] === value)));
+  pressGroup("ao", state.ao ? "on" : "off");
+  let renderer = null;
+  try { renderer = new THREE.WebGLRenderer({ canvas: $("#stage"), antialias: true, powerPreference: "high-performance" }); }
+  catch (err) { console.error("[hooked] WebGL unavailable, text-only page.", err); document.documentElement.classList.add("no-webgl"); }
+  const scene3d = renderer ? buildScene(renderer) : null;
+  $$("button[data-tile]").forEach((b) => b.addEventListener("click", () => {
+    state.tile = b.dataset.tile; document.documentElement.dataset.tile = state.tile; pressGroup("tile", state.tile);
+    scene3d?.applyPalette(PALETTES[state.tile]); hooks.api.doAction("switch_theme", state.tile);
+    toast(`do_action( 'switch_theme', '${state.tile === "day" ? "porcelain-day" : "dusk-core"}' )`);
+  }));
+  $$("button[data-font]").forEach((b) => b.addEventListener("click", () => { document.documentElement.dataset.font = b.dataset.font; pressGroup("font", b.dataset.font); requestAnimationFrame(() => { measure(); buildRail(); }); }));
+  $$("button[data-ao]").forEach((b) => b.addEventListener("click", () => { state.ao = b.dataset.ao === "on"; pressGroup("ao", b.dataset.ao); scene3d?.setAO(state.ao); }));
+  if (params.get("tile") === "dusk") $('button[data-tile="dusk"]').click();
+  if (params.get("font") === "geist") $('button[data-font="geist"]').click();
+  if (params.get("ao") === "off") $('button[data-ao="off"]').click();
+
+  function placeBoards() {
+    if (isStacked()) { acts.find((a) => a.id === "init").copy.appendChild($("#departures")); acts.find((a) => a.id === "title").copy.appendChild($("#manifest")); }
+    else $("#hud").append($("#departures"), $("#manifest"));
+  }
+  placeBoards();
+  STACKED_QUERY.addEventListener("change", () => { placeBoards(); measure(); buildRail(); });
+  measure(); buildRail();
+  document.fonts?.ready.then(() => { measure(); buildRail(); scene3d?.redrawLabels(); jumpFromParams(); });
+  addEventListener("resize", () => { measure(); buildRail(); });
+  function jumpFromParams() {
+    const at = params.get("at"); if (!at) return;
+    const [id, k] = at.split(":"); const b = beats.find((x) => x.act === id && x.k === Number(k || 0));
+    if (b) scrollTo({ top: b.y, behavior: "auto" });
+  }
+
+  /* ============================== DOM per frame ============================== */
+  let currentKey = "";
+  function updateDom(sb, story) {
+    const y = scrollY;
+    acts.forEach((a) => {
+      const inRange = y >= a.top - 1 && y <= a.top + a.span + 1, p = actProgress(a, y);
+      let vis = 0;
+      if (a.id === "hero") vis = y <= a.top + a.span ? 1 - Math.min(1, Math.max(0, (p - 0.5) / 0.5)) : 0;
+      else if (inRange) vis = Math.min(1, p / 0.06) * Math.min(1, (1 - p) / 0.06);
+      if (document.documentElement.classList.contains("no-webgl")) vis = 1;
+      if (Math.abs(vis - a.vis) > 0.002) {
+        a.vis = vis;
+        a.copy.style.opacity = vis.toFixed(3);
+        a.copy.style.transform = REDUCED_MOTION ? "none" : `translateY(${((1 - vis) * (a.id === "hero" ? -24 : 22)).toFixed(1)}px)`;
+        a.copy.style.visibility = vis < 0.01 ? "hidden" : "visible";
+      }
+      const k = sb.act === a.id ? sb.beat : (acts.indexOf(a) < acts.findIndex((x) => x.id === sb.act) ? a.edges.length - 2 : 0);
+      if (k !== a.beat) { a.beat = k; a.beatEls.forEach((li, j) => li.classList.toggle("on", j === k)); }
+    });
+    const initA = acts.find((a) => a.id === "init"), titleA = acts.find((a) => a.id === "title");
+    $("#note-init").classList.toggle("on", sb.act === "init" && sb.beat === 2);
+    $("#note-title").classList.toggle("on", sb.act === "title" && sb.beat >= 3);
+    $("#scrim").classList.toggle("on", Boolean(sb.inAct) && sb.inAct !== "hero" && sb.inAct !== "tile");
+    const nb = nearestBeat();
+    rail.querySelectorAll("button").forEach((btn, i) => btn.classList.toggle("on", i === nb && sb.inAct !== "tile"));
+
+    /* departure board */
+    $$("#dep-rows .row").forEach((row, i) => {
+      const done = i < story.ranCount, now = i === story.ranCount && story.running;
+      row.classList.toggle("done", done); row.classList.toggle("now", now);
+      row.querySelector(".st").textContent = done ? "✓ done" : now ? "▶ now" : "waiting";
+    });
+    $("#dep-status").textContent = !story.arrivedInit ? "train approaching" : !story.announced ? "train at platform" : story.ranCount === 0 ? "announcing…" : story.ranCount < LISTENERS.length ? `boarding ${story.ranCount}/${LISTENERS.length}` : "all listeners done";
+    $("#departures").classList.toggle("on", sb.inAct === "init" && initA.vis > 0.5);
+    /* manifest */
+    $$("#man-rows .row").forEach((row, i) => {
+      const done = i < story.passed, now = i === story.passed && story.inWorkshop;
+      row.classList.toggle("done", done); row.classList.toggle("now", now);
+      row.querySelector(".st").textContent = done ? "✓ changed" : now ? "▶ next" : "ahead";
+    });
+    $("#man-status").textContent = story.passed === 0 ? "arriving" : story.passed < WORKSHOP.length ? `${story.passed}/${WORKSHOP.length} stations` : "complete";
+    $("#man-foot").innerHTML = story.passed === WORKSHOP.length && sb.act === "title" && sb.beat === 4
+      ? `<b>return</b> "${esc(WORKSHOP[2].out)}"` : `in: "${esc(TITLE_IN)}"`;
+    $("#manifest").classList.toggle("on", sb.inAct === "title" && titleA.vis > 0.5);
+
+    const tileTop = $("#tile").getBoundingClientRect().top;
+    const fade = clamp01((tileTop - innerHeight * 0.25) / (innerHeight * 0.6));
+    ["#stage", "#hud", "#rail", "#legend", "#keyhint"].forEach((s) => { $(s).style.opacity = fade; });
+  }
+
+  /* ============================== tone mapping compensation ============================== */
+  function neutralToneMap([r, g, b]) {
+    const start = 0.76, desat = 0.15, x = Math.min(r, g, b), offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    let c = [r - offset, g - offset, b - offset]; const peak = Math.max(...c); if (peak < start) return c;
+    const d = 1 - start, newPeak = 1 - (d * d) / (peak + d - start); c = c.map((ch) => ch * (newPeak / peak));
+    const mix = 1 - 1 / (desat * (peak - newPeak) + 1); return c.map((ch) => ch + (newPeak - ch) * mix);
+  }
+  function toneCompensated(hex) {
+    const t = new THREE.Color(hex), goal = [t.r, t.g, t.b]; let g = [...goal];
+    for (let i = 0; i < 60; i++) { const o = neutralToneMap(g); g = g.map((ch, k) => Math.max(0, ch + (goal[k] - o[k]))); }
+    return new THREE.Color(g[0], g[1], g[2]);
+  }
+
+  /* ============================== 3D: the metro line ============================== */
+  function buildScene(renderer) {
+    const v = (x, y, z) => new THREE.Vector3(x, y, z);
+    const UP = v(0, 1, 0);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, isStacked() ? 1.5 : 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+    const scene = new THREE.Scene();
+    scene.background = toneCompensated(PALETTES.day.bg);
+    scene.fog = new THREE.Fog(toneCompensated(PALETTES.day.bg), PALETTES.day.fogNear, PALETTES.day.fogFar);
+    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+    const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 200);
+    const hemi = new THREE.HemisphereLight("#ffffff", "#d9d4cc", 0.55); scene.add(hemi);
+    const key = new THREE.DirectionalLight("#ffffff", 2.5);
+    key.position.set(-8, 22, 14); key.target.position.set(3, 0, 0); scene.add(key.target);
+    key.castShadow = true; key.shadow.mapSize.set(4096, 4096);
+    Object.assign(key.shadow.camera, { left: -30, right: 30, top: 18, bottom: -18, near: 1, far: 80 });
+    key.shadow.bias = -0.0003; key.shadow.normalBias = 0.02; scene.add(key);
+
+    const mat = (color, o = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.45, clearcoat: 0.5, clearcoatRoughness: 0.3, ...o });
+    const porcelain = mat(PALETTES.day.porcelain);
+    const tableMat = mat(PALETTES.day.table, { roughness: 0.7, clearcoat: 0.15 });
+    const ink = mat("#2B2D33", { roughness: 0.35 });
+    const lineMat = mat(PALETTES.day.line, { roughness: 0.32, emissive: PALETTES.day.line, emissiveIntensity: 0 });
+    const spurMat = mat("#C9CED8", { roughness: 0.5 });
+    const add = (geo, m, pos, o = {}) => { const mesh = new THREE.Mesh(geo, m); if (pos) mesh.position.copy(pos); mesh.castShadow = o.cast ?? true; mesh.receiveShadow = o.receive ?? true; (o.parent ?? scene).add(mesh); return mesh; };
+
+    /* ---------- seamless floor that only catches shadows ---------- */
+    const shadowMat = new THREE.ShadowMaterial({ opacity: PALETTES.day.shadow });
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), shadowMat); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+    const pickables = [];
+
+    /* transit path: a polyline with rounded corners, like a transit map */
+    function transitPath(points, radius) {
+      const path = new THREE.CurvePath(); let prev = points[0].clone();
+      for (let i = 1; i < points.length - 1; i++) {
+        const a = points[i - 1], b = points[i], c = points[i + 1];
+        const ab = b.clone().sub(a).normalize(), bc = c.clone().sub(b).normalize();
+        const r = Math.min(radius, b.distanceTo(a) / 2, c.distanceTo(b) / 2);
+        const p1 = b.clone().addScaledVector(ab, -r), p2 = b.clone().addScaledVector(bc, r);
+        path.add(new THREE.LineCurve3(prev, p1)); path.add(new THREE.QuadraticBezierCurve3(p1, b.clone(), p2)); prev = p2;
+      }
+      path.add(new THREE.LineCurve3(prev, points[points.length - 1].clone()));
+      return path;
+    }
+    /* ribbon: a crisp extruded line with a flat top and rounded ends (instead of a soft tube) */
+    const LINE_H = 0.12;
+    function ribbon(path, width, material, segs = 600, height = LINE_H) {
+      const pos = [], idx = [], hw = width / 2, pts = [], sides = [];
+      for (let i = 0; i <= segs; i++) { const u = i / segs, p = path.getPointAt(u), t = path.getTangentAt(u); pts.push(p); sides.push(new THREE.Vector3(-t.z, 0, t.x).normalize()); }
+      const strip = (fa, fb) => {
+        const base = pos.length / 3;
+        for (let i = 0; i <= segs; i++) { const a = fa(i), b = fb(i); pos.push(a.x, a.y, a.z, b.x, b.y, b.z); }
+        for (let i = 0; i < segs; i++) { const a = base + i * 2, b = a + 1, c = a + 2, d = a + 3; idx.push(a, b, c, b, d, c); }
+      };
+      const at = (i, s, y) => pts[i].clone().addScaledVector(sides[i], s * hw).setY(y);
+      strip((i) => at(i, -1, height), (i) => at(i, 1, height));
+      strip((i) => at(i, 1, height), (i) => at(i, 1, 0));
+      strip((i) => at(i, -1, 0), (i) => at(i, -1, height));
+      const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+      const mesh = add(geo, material);
+      [0, segs].forEach((i) => add(new THREE.CylinderGeometry(hw, hw, height, 40), material, pts[i].clone().setY(height / 2)));
+      return mesh;
+    }
+    lineMat.side = THREE.DoubleSide; spurMat.side = THREE.DoubleSide;
+    const accentMat = mat("#3858E9", { roughness: 0.3, emissive: "#3858E9", emissiveIntensity: 0 });
+    const route = transitPath([v(-15, 0, -3), v(-8, 0, -3), v(-5, 0, 0), v(6.5, 0, 0), v(9.5, 0, -3), v(24, 0, -3)], 1.4);
+    const LEN = route.getLength();
+    ribbon(route, 0.5, lineMat, 1100);
+    const SAMPLES = 2400, samplePts = Array.from({ length: SAMPLES + 1 }, (_, i) => route.getPointAt(i / SAMPLES));
+    const uOf = (x, z) => { let best = 0, bd = Infinity; samplePts.forEach((p, i) => { const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bd) { bd = d; best = i; } }); return best / SAMPLES; };
+    const plugMat = mat(ORIGIN_HEX.plugin, { roughness: 0.35, side: THREE.DoubleSide }), themeMat = mat(ORIGIN_HEX.theme, { roughness: 0.35, side: THREE.DoubleSide });
+    ribbon(transitPath([v(-4.9, 0, 5.4), v(-4.9, 0, 1.8), v(-3.7, 0, 0.45)], 0.7), 0.32, plugMat, 160);
+    ribbon(transitPath([v(-1.7, 0, 5.4), v(-1.7, 0, 1.8), v(-2.9, 0, 0.45)], 0.7), 0.32, themeMat, 160);
+    ribbon(transitPath([v(4.4, 0, 0.3), v(4.4, 0, 3.6)], 0.5), 0.26, spurMat, 40);
+    ribbon(transitPath([v(10.4, 0, -3.15), v(11.9, 0, -4.7), v(14.4, 0, -4.7)], 0.6), 0.26, spurMat, 90);
+
+    /* ---------- typography printed on the map (no signposts) ---------- */
+    const labelJobs = [];
+    const labelColors = { ink: "#1d1d1f", muted: "#6e6e73" };
+    function labelTexture(draw, w = 1024, h = 256) {
+      const canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h;
+      const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = maxAniso;
+      const job = () => { const g = canvas.getContext("2d"); g.clearRect(0, 0, w, h); draw(g, w, h); tex.needsUpdate = true; };
+      job(); labelJobs.push(job); return tex;
+    }
+    const signMats = [];
+    const TILT = 0.6;
+    function textLabel(title, sub, pos, { size = 1, focus = ["overview"], card, accent } = {}) {
+      const W = 2048, H = 380;
+      const tex = labelTexture((g, w) => {
+        g.textAlign = "center"; g.textBaseline = "alphabetic";
+        if (accent) { g.fillStyle = accent; g.beginPath(); g.roundRect(w / 2 - 60, 22, 120, 18, 9); g.fill(); }
+        g.fillStyle = labelColors.ink; g.font = `650 ${title.length > 13 ? 138 : 158}px Inter, sans-serif`; g.fillText(title, w / 2, 205);
+        if (sub) { g.fillStyle = labelColors.muted; g.font = `68px "Departure Mono", monospace`; g.fillText(sub.toUpperCase(), w / 2, 312); }
+      }, W, H);
+      const m = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }); m.userData.focus = focus; signMats.push(m);
+      const w = 5.4 * size, h = w * (H / W);
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
+      plane.rotation.x = -Math.PI / 2 + TILT; plane.position.copy(pos).setY(0.02 + (h / 2) * Math.sin(TILT)); plane.renderOrder = 3; scene.add(plane);
+      if (card) { plane.userData = { card }; pickables.push(plane); }
+      return plane;
+    }
+
+    /* ---------- stations: white pill markers with an ink outline, like a transit map ---------- */
+    const stationWhite = mat("#FFFFFF", { roughness: 0.28, clearcoat: 0.9 });
+    function pillShape(len, wid) {
+      const r = wid / 2, s = new THREE.Shape();
+      s.moveTo(-len / 2 + r, -r); s.lineTo(len / 2 - r, -r); s.absarc(len / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2, false);
+      s.lineTo(-len / 2 + r, r); s.absarc(-len / 2 + r, 0, r, Math.PI / 2, Math.PI * 1.5, false); return s;
+    }
+    const extrude = (shape, depth) => new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 4, curveSegments: 32 });
+    function stationMarker(x, z, { len = 1.05, wid = 0.46, featured = false, card }) {
+      const t = route.getTangentAt(uOf(x, z));
+      const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = Math.atan2(-t.x, -t.z); scene.add(g);
+      const rim = new THREE.Mesh(extrude(pillShape(len + 0.2, wid + 0.2), 0.2), featured ? accentMat : ink);
+      const face = new THREE.Mesh(extrude(pillShape(len, wid), 0.27), stationWhite);
+      [rim, face].forEach((m) => { m.rotation.x = -Math.PI / 2; m.castShadow = true; m.receiveShadow = true; m.userData = { card }; g.add(m); pickables.push(m); });
+      return g;
+    }
+    const STATIONS = [
+      { card: "browser", title: "your browser", sub: "start & finish", x: -15, z: -3, lz: -1.7, len: 1.3 },
+      { card: "index.php", title: "index.php", sub: "front door", x: -12, z: -3, lz: 1.75 },
+      { card: "wp-config.php", title: "wp-config.php", sub: "control room", x: -9, z: -3, lz: -1.7 },
+      { card: "wp-settings.php", title: "wp-settings.php", sub: "interchange", x: -3.3, z: 0, lz: -1.75, len: 1.5 },
+      { card: "init", title: "init", sub: "do_action( 'init' )", x: 0.8, z: 0, lz: -1.75, featured: true, focus: ["overview", "init"] },
+      { card: "WP_Query", title: "WP_Query", sub: "to the depot", x: 4.4, z: 0, lz: -1.75 },
+      { card: "template", title: "template", sub: "junction", x: 10.6, z: -3, lz: 1.75 },
+      { card: "the_title", title: "the_title", sub: "filter workshop", x: 12.0, z: -3, lz: -1.75, focus: ["overview"] },
+      { card: "200 OK", title: "200 OK", sub: "back to your browser", x: 22.4, z: -3, lz: -1.75, len: 1.3 },
+    ];
+    STATIONS.forEach((s) => {
+      stationMarker(s.x, s.z, { featured: s.featured, card: s.card, len: s.len ?? 1.05 });
+      textLabel(s.title, s.sub, v(s.x, 0, s.z + s.lz), { card: s.card, focus: s.focus ?? ["overview"], size: s.featured ? 1.15 : 1 });
+    });
+    textLabel("plugins line", "boards at wp-settings", v(-4.9, 0, 6.6), { card: "plugins", size: 0.78, accent: ORIGIN_HEX.plugin });
+    textLabel("theme line", "boards at wp-settings", v(-1.7, 0, 6.6), { card: "theme", size: 0.78, accent: ORIGIN_HEX.theme });
+    textLabel("index.php", "fallback platform", v(14.4, 0, -6.0), { card: "template", size: 0.7, focus: ["template"] }); /* shown in the template chapter */
+    /* junction signal */
+    add(new THREE.CylinderGeometry(0.035, 0.04, 0.9, 12), porcelain, v(11.2, 0.45, -4.2));
+    add(new THREE.SphereGeometry(0.09, 20, 14), mat("#7fd8a0", { emissive: "#7fd8a0", emissiveIntensity: 0.9 }), v(11.2, 0.95, -4.2), { cast: false });
+
+    /* ---------- depot: a data vault ---------- */
+    const depot = new THREE.Group(); depot.position.set(4.4, 0, 4.6); scene.add(depot);
+    const vault = add(new RoundedBoxGeometry(1.9, 1.15, 1.35, 6, 0.22), porcelain, v(0, 0.58, 0), { parent: depot });
+    const slitMat = mat("#3858E9", { emissive: "#3858E9", emissiveIntensity: 0.3 });
+    [0.36, 0.58, 0.8].forEach((y) => add(new RoundedBoxGeometry(1.36, 0.055, 0.04, 2, 0.02), slitMat, v(0, y, 0.69), { parent: depot, cast: false }));
+    vault.userData = { card: "database" }; pickables.push(vault);
+    textLabel("database", "the depot", v(4.4, 0, 6.4), { card: "database", size: 0.8 });
+
+    /* ---------- init platform: listeners as ticket passes ---------- */
+    const INIT = STATIONS.find((s) => s.card === "init");
+    const waitingColor = new THREE.Color(PALETTES.day.waiting);
+    add(new RoundedBoxGeometry(6.1, 0.12, 1.45, 4, 0.05), mat("#ECE9E3", { roughness: 0.6 }), v(INIT.x + 0.85, 0.06, 1.9));
+    const ticketDraw = (n, origin, color, done) => (g, w, h) => {
+      g.fillStyle = done ? color : "#16171b"; g.beginPath(); g.roundRect(0, 0, w, h, 30); g.fill();
+      g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillStyle = done ? "rgba(29,29,31,.6)" : "rgba(255,255,255,.55)"; g.font = `34px "Departure Mono", monospace`; g.fillText("TICKET", w / 2, 50);
+      g.fillStyle = done ? "#1d1d1f" : "#ffffff"; g.font = `800 ${String(n).length > 1 ? 172 : 200}px Inter, sans-serif`; g.fillText(String(n), w / 2, h * 0.43);
+      g.setLineDash([10, 10]); g.strokeStyle = done ? "rgba(29,29,31,.35)" : "rgba(255,255,255,.25)"; g.lineWidth = 3; g.beginPath(); g.moveTo(26, h * 0.7); g.lineTo(w - 26, h * 0.7); g.stroke(); g.setLineDash([]);
+      g.fillStyle = done ? "#1d1d1f" : color; g.font = `40px "Departure Mono", monospace`; g.fillText(origin.toUpperCase(), w / 2, h * 0.84);
+      if (done) { g.fillStyle = "#1d1d1f"; g.beginPath(); g.arc(w - 50, 50, 30, 0, Math.PI * 2); g.fill(); g.strokeStyle = color; g.lineWidth = 9; g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); g.moveTo(w - 63, 51); g.lineTo(w - 53, 61); g.lineTo(w - 36, 40); g.stroke(); }
+    };
+    const tickets = LISTENERS.map((name, i) => {
+      const c = CATALOG[name], color = ORIGIN_HEX[c.origin];
+      const g = new THREE.Group(); g.position.set(INIT.x - 1.3 + i * 0.86, 0.12, 1.9); g.rotation.x = -0.16; scene.add(g);
+      add(new RoundedBoxGeometry(0.44, 0.05, 0.24, 3, 0.02), porcelain, v(0, 0.025, 0), { parent: g });
+      const cardMat = mat("#ffffff", { roughness: 0.3, clearcoat: 1, emissive: color, emissiveIntensity: 0 });
+      const card = add(new RoundedBoxGeometry(0.64, 0.92, 0.04, 4, 0.06), cardMat, v(0, 0.52, 0), { parent: g });
+      const waitTex = labelTexture(ticketDraw(c.priority, c.origin, color, false), 320, 460);
+      const doneTex = labelTexture(ticketDraw(c.priority, c.origin, color, true), 320, 460);
+      const faceMat = new THREE.MeshBasicMaterial({ map: waitTex, transparent: true, toneMapped: false }); faceMat.userData.focus = ["overview", "init"]; signMats.push(faceMat);
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.88), faceMat); face.position.set(0, 0.52, 0.022); g.add(face);
+      [card, face].forEach((m) => { m.userData = { card: name }; pickables.push(m); });
+      return { name, g, cardMat, face, waitTex, doneTex, lit: 0, hop: 0, wasDone: false };
+    });
+    const speaker = new THREE.Object3D(); speaker.position.set(INIT.x - 1.5, 0, 0.5); scene.add(speaker);
+    const ringMats = [], rings = [0, 1, 2].map(() => {
+      const m = new THREE.MeshBasicMaterial({ color: PALETTES.day.ring, transparent: true, opacity: 0, depthWrite: false });
+      ringMats.push(m); const r = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.018, 8, 120), m);
+      r.position.set(INIT.x, 0.2, 0); r.rotation.x = Math.PI / 2; scene.add(r); return r;
+    });
+
+    /* ---------- the_title workshop: portals with a glowing inner rim ---------- */
+    function archShape(w, h, t, r) {
+      const s = new THREE.Shape(), ri = Math.max(0.02, r - t);
+      s.moveTo(-w / 2, 0); s.lineTo(-w / 2, h - r); s.absarc(-w / 2 + r, h - r, r, Math.PI, Math.PI / 2, true);
+      s.lineTo(w / 2 - r, h); s.absarc(w / 2 - r, h - r, r, Math.PI / 2, 0, true); s.lineTo(w / 2, 0);
+      s.lineTo(w / 2 - t, 0); s.lineTo(w / 2 - t, h - t - ri); s.absarc(w / 2 - t - ri, h - t - ri, ri, 0, Math.PI / 2, false);
+      s.lineTo(-w / 2 + t + ri, h - t); s.absarc(-w / 2 + t + ri, h - t - ri, ri, Math.PI / 2, Math.PI, false); s.lineTo(-w / 2 + t, 0); s.closePath();
+      return s;
+    }
+    const gates = WORKSHOP.map((w) => {
+      const c = CATALOG[w.name], color = ORIGIN_HEX[c.origin];
+      const g = new THREE.Group(); g.position.set(w.x, 0, -3); g.rotation.y = Math.PI / 2; scene.add(g);
+      const frame = add(extrude(archShape(1.75, 1.55, 0.17, 0.42), 0.2), porcelain, v(0, 0, -0.1), { parent: g });
+      const lightMat = mat(color, { roughness: 0.3, emissive: color, emissiveIntensity: 0.35 });
+      const rim = add(extrude(archShape(1.42, 1.39, 0.05, 0.27), 0.26), lightMat, v(0, 0, -0.13), { parent: g, cast: false });
+      [frame, rim].forEach((m) => { m.userData = { card: w.name }; pickables.push(m); });
+      textLabel(w.name, `ticket ${c.priority} · ${c.origin}`, v(w.x, 0, -3 + 1.75), { card: w.name, size: 0.66, focus: ["workshop"], accent: color });
+      return { ...w, g, frameMat: lightMat, u: uOf(w.x, -3), flash: 0 };
+    });
+
+    /* ---------- the train ---------- */
+    const trainMat = mat("#FBFBFC", { roughness: 0.28, clearcoat: 1 });
+    const glass = mat("#1A1E2A", { roughness: 0.12, clearcoat: 1 });
+    const stripe = mat("#3858E9", { roughness: 0.3, emissive: "#3858E9", emissiveIntensity: 0 });
+    const makeCar = (lead) => {
+      const car = new THREE.Group(); scene.add(car);
+      const body = add(new RoundedBoxGeometry(0.74, 0.6, 1.92, 8, 0.29), trainMat, v(0, 0.32, 0), { parent: car });
+      add(new RoundedBoxGeometry(0.76, 0.19, 1.62, 6, 0.09), glass, v(0, 0.41, 0), { parent: car });
+      add(new RoundedBoxGeometry(0.755, 0.05, 1.84, 3, 0.025), stripe, v(0, 0.18, 0), { parent: car });
+      if (lead) add(new RoundedBoxGeometry(0.36, 0.05, 0.03, 2, 0.02), new THREE.MeshBasicMaterial({ color: "#fff7d6" }), v(0, 0.24, 0.965), { parent: car, cast: false });
+      body.userData = { card: "train" }; pickables.push(body);
+      return car;
+    };
+    const cars = [makeCar(true), makeCar(false)];
+    const CAR_GAP = 2.0 / LEN;
+    function placeTrain(u) {
+      cars.forEach((car, i) => {
+        const uu = clamp01(u - i * CAR_GAP), p = route.getPointAt(uu), t = route.getTangentAt(uu);
+        car.position.set(p.x, LINE_H, p.z); car.lookAt(p.x + t.x, LINE_H, p.z + t.z);
+      });
+    }
+
+    /* ---------- post ---------- */
+    const composer = new EffectComposer(renderer); composer.setPixelRatio(renderer.getPixelRatio());
+    composer.addPass(new RenderPass(scene, camera));
+    const gtao = new GTAOPass(scene, camera, innerWidth, innerHeight); gtao.enabled = state.ao; composer.addPass(gtao);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.5, 0.93);
+    const signTint = new THREE.Color("#ffffff"); bloom.enabled = false; composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+    let palette = PALETTES.day;
+    function applyPalette(p) {
+      palette = p;
+      scene.background.copy(toneCompensated(p.bg)); scene.fog.color.copy(toneCompensated(p.bg)); scene.fog.near = p.fogNear; scene.fog.far = p.fogFar;
+      scene.environmentIntensity = p.env; key.intensity = p.key; key.color.set(p.keyColor); hemi.intensity = p.hemi; shadowMat.opacity = p.shadow;
+      tableMat.color.set(p.table); porcelain.color.set(p.porcelain); lineMat.color.set(p.line); lineMat.emissive.set(p.line); lineMat.emissiveIntensity = p.lineGlow;
+      stripe.emissiveIntensity = p.lineGlow; bloom.enabled = p.bloom; signTint.set(p.bloom ? "#c9ced8" : "#ffffff");
+      labelColors.ink = p.bloom ? "#E6E9EF" : "#1d1d1f"; labelColors.muted = p.bloom ? "#8F949D" : "#6e6e73"; labelJobs.forEach((job) => job()); waitingColor.set(p.waiting); ringMats.forEach((m) => m.color.set(p.ring));
+    }
+
+    /* ---------- HUD ---------- */
+    const trainPill = $("#train-pill"), announcePill = $("#announce-pill");
+    const toScreen = (p) => { const q = p.clone().project(camera); return { x: (q.x + 1) * 0.5 * innerWidth, y: (1 - q.y) * 0.5 * innerHeight, ok: q.z < 1 }; };
+
+    /* ---------- interaction ---------- */
+    const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2(2, 2);
+    let hovered = null, lastPointer = null;
+    const pick = (x, y) => { pointer.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); raycaster.setFromCamera(pointer, camera); return raycaster.intersectObjects(pickables, false)[0]?.object ?? null; };
+    const canvas = $("#stage");
+    canvas.addEventListener("pointermove", (e) => { lastPointer = { x: e.clientX, y: e.clientY }; });
+    canvas.addEventListener("pointerleave", () => { lastPointer = null; });
+    canvas.addEventListener("click", (e) => {
+      const hit = pick(e.clientX, e.clientY); if (!hit) { hideCard(true); return; }
+      e.stopPropagation(); if (hit.userData.card === "init") announce(); showCard(hit.userData.card, e.clientX, e.clientY, true);
+    });
+
+    let lastW = 0, lastH = 0;
+    function resize() {
+      const touch = matchMedia("(pointer: coarse)").matches;
+      if (touch && innerWidth === lastW && Math.abs(innerHeight - lastH) < 160) return;
+      lastW = innerWidth; lastH = innerHeight; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+    }
+    addEventListener("resize", resize); resize();
+
+    /* ---------- the story state machine: each beat has a resting pose ---------- */
+    const U_INIT = uOf(INIT.x, 0) + CAR_GAP / 2;
+    const POSES = {
+      "hero:0": { u: uOf(-14.4, -3) + CAR_GAP, shot: "overview" },
+      "init:0": { u: U_INIT, shot: "init" }, "init:1": { u: U_INIT, shot: "init" }, "init:2": { u: U_INIT, shot: "init" },
+      "title:0": { u: uOf(12.3, -3), shot: "workshop" },
+      "title:1": { u: gates[0].u + 1.2 / LEN, shot: "workshop" }, "title:2": { u: gates[1].u + 1.2 / LEN, shot: "workshop" },
+      "title:3": { u: gates[2].u + 1.2 / LEN, shot: "workshop" }, "title:4": { u: uOf(20.6, -3), shot: "workshop" },
+      "end:0": { u: uOf(22.4, -3) + CAR_GAP / 2, shot: "finale" },
+    };
+    const ORDER = Object.keys(POSES);
+    const story = { key: "", trainU: POSES["hero:0"].u, from: 0, to: 0, start: 0, dur: 0, moving: false, arrivedInit: false, announced: false, announceAt: -99, cascadeStart: null, ranCount: 0, running: false, passed: 0, inWorkshop: false };
+    function enterBeat(keyName, now) {
+      const prevIdx = ORDER.indexOf(story.key), idx = ORDER.indexOf(keyName), dir = prevIdx < 0 ? 1 : Math.sign(idx - prevIdx);
+      story.key = keyName;
+      const target = POSES[keyName].u;
+      if (Math.abs(target - story.trainU) > 1e-5) {
+        story.from = story.trainU; story.to = target; story.start = now;
+        story.dur = REDUCED_MOTION ? 0 : Math.min(3.0, Math.max(0.9, Math.abs(target - story.trainU) * LEN * 0.16));
+        story.moving = true;
+      }
+      const atInit = keyName.startsWith("init:"), beat = Number(keyName.split(":")[1]);
+      if (!atInit || beat < 1) { story.announced = false; }
+      if (!atInit || beat < 2) story.cascadeStart = null;
+      if (atInit && beat === 2 && dir < 0) story.cascadeStart = -Infinity; /* came back from later: everyone already went */
+      hooks.api.doAction("hooked.stop", keyName);
+    }
+    function announce() { story.announceAt = clock.elapsedTime; hooks.api.doAction("init"); }
+
+    /* camera shots */
+    const rig = (look, dist, elev) => { const e = THREE.MathUtils.degToRad(elev); return { look, pos: look.clone().add(v(-0.08 * dist, Math.sin(e) * dist, Math.cos(e) * dist)) }; };
+    function shotFor(name) {
+      const cam = CAMERA[layoutMode()];
+      if (name === "overview" || name === "finale") {
+        const o = cam.overview, fx = name === "finale" ? 4 : 0;
+        return rig(v(o.look[0] + fx, o.look[1], o.look[2]), o.dist, o.elev);
+      }
+      const subject = name === "init" ? v(INIT.x + 0.8, 0.7, 0.4) : v(gates[1].x, 0.9, -3);
+      const halfW = cam.dist * Math.tan(THREE.MathUtils.degToRad(15)) * (innerWidth / innerHeight);
+      return rig(v(subject.x - cam.shiftFrac * halfW, subject.y + cam.lookY, subject.z), cam.dist, cam.elev);
+    }
+    const startShot = shotFor("overview");
+    const camPos = startShot.pos.clone(), camLook = startShot.look.clone();
+    let shotName = "overview";
+
+    const clock = new THREE.Clock();
+    let lastPillText = "";
+    function pillText() {
+      const k = story.key;
+      if (k.startsWith("end")) return "200 OK · your page";
+      if (k.startsWith("title")) return `the_title → "${story.passed === 0 ? TITLE_IN : WORKSHOP[story.passed - 1].out}"`;
+      if (k.startsWith("init")) return "do_action( 'init' )";
+      return "GET /hello-world/";
+    }
+
+    function frame() {
+      const dt = Math.min(clock.getDelta(), 0.05), now = clock.elapsedTime;
+      const sb = scrollBeat();
+      const keyName = `${sb.act}:${sb.beat}`;
+      if (keyName !== story.key && POSES[keyName]) enterBeat(keyName, now);
+
+      /* train tween */
+      if (story.moving) {
+        const k = story.dur === 0 ? 1 : clamp01((now - story.start) / story.dur);
+        story.trainU = lerp(story.from, story.to, easeInOut(k));
+        if (k >= 1) story.moving = false;
+      }
+      placeTrain(story.trainU);
+      const [act, beatStr] = story.key.split(":"), beat = Number(beatStr);
+      story.arrivedInit = act === "init" && !story.moving;
+      if (act === "init" && beat >= 1 && !story.moving && !story.announced) { story.announced = true; announce(); }
+      if (act === "init" && beat === 2 && !story.moving && story.cascadeStart === null) story.cascadeStart = now + 0.7;
+      if (act === "init" && beat === 2) {
+        const since = now - (story.cascadeStart ?? now + 99);
+        story.ranCount = story.cascadeStart === -Infinity ? LISTENERS.length : Math.max(0, Math.min(LISTENERS.length, Math.floor(since / 0.5) + 1));
+        story.running = story.ranCount < LISTENERS.length && since > -0.7;
+      } else if (act === "title" || act === "end") { story.ranCount = LISTENERS.length; story.running = false; }
+      else { story.ranCount = 0; story.running = false; }
+      story.passed = gates.filter((g) => story.trainU > g.u + 0.004).length;
+      story.inWorkshop = act === "title";
+      updateDom(sb, story);
+
+      /* announcement rings + pill */
+      const ringT = now - story.announceAt;
+      rings.forEach((r, i) => { const l = (ringT - i * 0.22) / 1.6, on = l > 0 && l < 1; r.scale.setScalar(on ? 1 + l * 4.2 : 1); ringMats[i].opacity = on ? (1 - l) * 0.7 : 0; });
+
+      /* ticket passes: dark while waiting → flip to their colour (with a check) once they've had their turn */
+      tickets.forEach((tk, i) => {
+        const done = i < story.ranCount, current = i === story.ranCount && story.running;
+        if (done !== tk.wasDone) { tk.wasDone = done; tk.face.material.map = done ? tk.doneTex : tk.waitTex; tk.face.material.needsUpdate = true; if (done) tk.hop = 1; }
+        tk.lit = lerp(tk.lit, done ? 1 : 0, 1 - Math.pow(0.0005, dt));
+        tk.hop = Math.max(0, tk.hop - dt * 2.2);
+        const flip = tk.hop > 0 ? Math.sin((1 - tk.hop) * Math.PI) : 0;
+        tk.g.position.y = 0.12 + tk.lit * 0.1 + flip * 0.22;
+        tk.g.rotation.y = flip * Math.PI * 0.18;
+        tk.cardMat.emissiveIntensity = (current ? 0.35 + 0.25 * Math.sin(now * 7) : 0) + (highlighted === tk.name ? 0.3 : 0);
+        tk.g.scale.setScalar(highlighted === tk.name ? 1.1 : 1);
+      });
+      /* gantries flash as the train passes under */
+      gates.forEach((g) => { const near = Math.abs(story.trainU - g.u) < 0.025 || highlighted === g.name; g.flash = lerp(g.flash, near ? 1 : 0, 1 - Math.pow(0.002, dt)); g.frameMat.emissiveIntensity = 0.3 + g.flash * (palette.bloom ? 1.1 : 0.7); });
+
+      /* focus: the hero shows only the map's labels; each stop shows its own and dims the rest */
+      const focusName = POSES[story.key]?.shot ?? "overview";
+      const wide = focusName === "overview" || focusName === "finale";
+      signMats.forEach((m) => {
+        const tags = m.userData.focus ?? ["overview"];
+        const want = tags.includes(wide ? "overview" : focusName) ? 1 : 0;
+        m.opacity = lerp(m.opacity, want, 1 - Math.pow(0.002, dt));
+      });
+      /* camera: ease toward the beat's shot */
+      shotName = POSES[story.key]?.shot ?? shotName;
+      const shot = shotFor(shotName), ease = REDUCED_MOTION ? 1 : 1 - Math.exp(-dt * 2.6);
+      camPos.lerp(shot.pos, ease); camLook.lerp(shot.look, ease);
+      camera.position.copy(camPos); camera.lookAt(camLook); camera.updateMatrixWorld();
+
+      /* HUD pills (hidden if they'd cover the copy or a board) */
+      const blockers = [];
+      const activeAct = acts.find((a) => a.id === sb.inAct); if (activeAct && activeAct.vis > 0.05) blockers.push(activeAct.copy.getBoundingClientRect());
+      ["#departures", "#manifest"].forEach((s) => { const el = $(s); if (el.classList.contains("on") && el.parentElement.id === "hud") blockers.push(el.getBoundingClientRect()); });
+      blockers.push($("header .controls").getBoundingClientRect(), $(".logo").getBoundingClientRect());
+      const blocked = (x, y) => blockers.some((r) => x > r.left - 20 && x < r.right + 20 && y > r.top - 20 && y < r.bottom + 20);
+      const lead = cars[0].position.clone().add(v(0, 0.9, 0)), lp = toScreen(lead);
+      const txt = pillText(); if (txt !== lastPillText) { lastPillText = txt; trainPill.innerHTML = `<span class="pulse">${esc(txt)}</span>`; }
+      const pw = trainPill.offsetWidth || 200;
+      trainPill.style.left = `${Math.max(pw / 2 + 10, Math.min(lp.x, innerWidth - pw / 2 - 10))}px`; trainPill.style.top = `${lp.y}px`;
+      const announcing = act === "init" && beat >= 1 && story.announced;
+      trainPill.style.opacity = lp.ok && !announcing && !blocked(lp.x, lp.y - 24) && sb.inAct !== "tile" ? 1 : 0;
+      const sp = toScreen(speaker.position.clone().add(v(0.3, 2.1, 0)));
+      const aw = announcePill.offsetWidth || 220;
+      announcePill.style.left = `${Math.max(aw / 2 + 10, Math.min(sp.x, innerWidth - aw / 2 - 10))}px`; announcePill.style.top = `${Math.max(70, sp.y)}px`;
+      announcePill.style.opacity = act === "init" && beat >= 1 && story.announced && sp.ok && !blocked(sp.x, sp.y - 24) ? 1 : 0;
+
+      /* hover */
+      if (lastPointer && !cardState.pinned) {
+        const hit = pick(lastPointer.x, lastPointer.y);
+        if (hit !== hovered) { hovered = hit; canvas.style.cursor = hit ? "help" : ""; if (hit) showCard(hit.userData.card, lastPointer.x, lastPointer.y); else hideCard(); }
+        else if (hit) placeCard(lastPointer.x, lastPointer.y);
+      } else if (!lastPointer && hovered && !cardState.pinned) { hovered = null; hideCard(); }
+
+      composer.render(dt);
+      if (firstFrameSecs === null) { firstFrameSecs = (performance.now() - t0) / 1000; renderFooter(); }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    return { applyPalette, setAO: (on) => { gtao.enabled = on; }, redrawLabels: () => labelJobs.forEach((j) => j()) };
+  }
+
+  if (!renderer) { const loop = () => { updateDom(scrollBeat(), { ranCount: LISTENERS.length, running: false, passed: 3, inWorkshop: false, arrivedInit: true, announced: true }); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+</script>
+</body>
+</html>

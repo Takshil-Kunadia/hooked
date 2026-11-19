@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="en" data-tile="day" data-font="inter">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hooked: Design Round 1</title>
+<meta name="description" content="Throwaway design exploration for the Porcelain Machine direction." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:opsz,wght@14..32,400..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500;600&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  @font-face {
+    font-family: "Departure Mono";
+    src: url("https://cdn.jsdelivr.net/gh/rektdeckard/departure-mono@main/public/assets/DepartureMono-Regular.woff2") format("woff2");
+    font-display: swap;
+  }
+
+  :root {
+    --bg: #f5f5f7;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --hairline: rgba(0, 0, 0, 0.1);
+    --panel: rgba(255, 255, 255, 0.72);
+    --hud: #1d1d1f;
+    --hud-dim: rgba(29, 29, 31, 0.5);
+    --accent: #3858e9;
+    --porcelain: #f2f0eb;
+    --lilac: #c9b3f5;
+    --mint: #9fe0c8;
+    --butter: #f3dc8c;
+    --coral: #f4a99a;
+    --font-display: "Inter", system-ui, sans-serif;
+    --font-serif: "Instrument Serif", Georgia, serif;
+    --font-code: "JetBrains Mono", ui-monospace, monospace;
+    --font-hud: "Departure Mono", "JetBrains Mono", ui-monospace, monospace;
+    --font-hand: "Caveat", "Comic Sans MS", cursive;
+  }
+  html[data-font="geist"] { --font-display: "Geist", system-ui, sans-serif; }
+  html[data-tile="dusk"] {
+    --bg: #0e1117;
+    --text: #f5f5f7;
+    --muted: #8a8f98;
+    --hairline: rgba(255, 255, 255, 0.12);
+    --panel: rgba(18, 22, 30, 0.62);
+    --hud: #e8ecf2;
+    --hud-dim: rgba(232, 236, 242, 0.5);
+    --accent: #8aa4ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); transition: background-color 0.6s, color 0.6s; }
+  body { font-family: var(--font-display); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overflow-x: hidden; }
+  ::selection { background: var(--accent); color: #fff; }
+
+  /* ---------- fixed layers ---------- */
+  #stage { position: fixed; top: 0; left: 0; width: 100vw; height: 100lvh; display: block; z-index: 0; transition: opacity 0.6s; }
+  .dots {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 0.6s;
+    background-image: radial-gradient(var(--hud-dim) 1px, transparent 1.4px);
+    background-size: 30px 30px;
+    -webkit-mask-image: radial-gradient(ellipse at 60% 50%, #000 30%, transparent 80%);
+            mask-image: radial-gradient(ellipse at 60% 50%, #000 30%, transparent 80%);
+  }
+  html[data-tile="dusk"] .dots { opacity: 0.22; }
+  .scrim {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 0.6s;
+    background: linear-gradient(90deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 88%, transparent) 30%, transparent 56%);
+  }
+  .scrim.on { opacity: 1; }
+  .fadeable { transition: opacity 0.5s; }
+
+  #hud { position: fixed; inset: 0; z-index: 3; pointer-events: none; transition: opacity 0.5s; }
+  #hud svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #hud path { fill: none; stroke: var(--hud); stroke-width: 1; opacity: 0; transition: opacity 0.4s; }
+  #hud circle { fill: var(--hud); opacity: 0; transition: opacity 0.4s; }
+  #hud .on { opacity: 1; }
+  .callout {
+    position: absolute; font-family: var(--font-hud); font-size: 12px; line-height: 1.55; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--hud); white-space: nowrap; opacity: 0; transition: opacity 0.4s;
+  }
+  .callout.on { opacity: 1; }
+  .callout .k { color: var(--hud-dim); display: inline-block; min-width: 11ch; }
+  .tag {
+    position: absolute; transform: translate(-50%, -100%); font-family: var(--font-hud); font-size: 11px;
+    letter-spacing: 0.04em; color: var(--hud); white-space: nowrap; opacity: 0; transition: opacity 0.35s;
+  }
+  .tag.on { opacity: 0.9; }
+  .marble-label {
+    position: absolute; transform: translate(-50%, calc(-100% - 22px)); font-family: var(--font-code); font-size: 13px;
+    padding: 6px 12px; border-radius: 999px; background: var(--panel); color: var(--text);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border: 1px solid var(--hairline); white-space: nowrap;
+    transition: opacity 0.3s;
+  }
+  .marble-label .pulse { display: inline-block; animation: tick 0.45s ease-out; }
+  @keyframes tick { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .tooltip {
+    position: fixed; z-index: 6; pointer-events: none; font-family: var(--font-hud); font-size: 12px; line-height: 1.5;
+    letter-spacing: 0.04em; padding: 10px 12px; border-radius: 12px; background: var(--panel); color: var(--text);
+    border: 1px solid var(--hairline); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    opacity: 0; transform: translate(14px, 14px); transition: opacity 0.15s; max-width: 320px;
+  }
+  .tooltip.on { opacity: 1; }
+  .tooltip .dim { color: var(--muted); }
+
+  header.bar {
+    position: fixed; top: 14px; left: 16px; right: 16px; z-index: 7; display: flex; justify-content: space-between;
+    align-items: center; gap: 12px; pointer-events: none;
+  }
+  .logo { font-family: var(--font-hud); font-size: 14px; letter-spacing: 0.06em; pointer-events: auto; }
+  .logo span { color: var(--muted); }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; pointer-events: auto; }
+  .seg {
+    display: inline-flex; align-items: center; padding: 3px; border-radius: 999px; background: var(--panel);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid var(--hairline);
+  }
+  .seg .label { font-family: var(--font-hud); font-size: 10px; letter-spacing: 0.08em; color: var(--muted); padding: 0 8px 0 10px; text-transform: uppercase; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; cursor: pointer; font-family: var(--font-hud); font-size: 11px;
+    letter-spacing: 0.06em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px; color: var(--muted);
+  }
+  .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .rail { position: fixed; left: 24px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; flex-direction: column; gap: 8px; }
+  .rail i { position: relative; display: block; font-style: normal; width: 10px; height: 1px; background: var(--hud-dim); transition: width 0.3s, background 0.3s; }
+  .rail i.on { width: 24px; background: var(--text); }
+  .rail i[data-label]::after {
+    content: attr(data-label); position: absolute; left: 32px; top: -6px; font-family: var(--font-hud); font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; opacity: 0.6; transition: opacity 0.3s;
+  }
+  .rail i.on[data-label]::after { opacity: 1; color: var(--text); }
+
+  .legend { position: fixed; left: 24px; bottom: 16px; z-index: 5; display: flex; gap: 14px; font-family: var(--font-hud); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+  .legend b { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--hairline); }
+  .wpfooter { position: fixed; right: 18px; bottom: 16px; z-index: 5; font-family: var(--font-hud); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+
+  .toast {
+    position: fixed; left: 50%; top: 70px; z-index: 8; transform: translate(-50%, -8px); font-family: var(--font-code); font-size: 13px;
+    padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--bg); opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- story ---------- */
+  main { position: relative; z-index: 2; pointer-events: none; }
+  .act { position: relative; min-height: 100svh; display: flex; align-items: center; padding: 0 6vw 0 clamp(72px, 9vw, 150px); }
+  .act.tall { align-items: flex-start; }
+  .act.tall .copy { position: sticky; top: 24vh; }
+  .copy { max-width: 540px; pointer-events: auto; }
+  .hero { align-items: flex-end; padding-bottom: 13vh; }
+  .hero .copy { max-width: 1180px; }
+
+  .eyebrow { font-family: var(--font-hud); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 22px; }
+  h1 { font-size: clamp(38px, 6.2vw, 98px); line-height: 0.98; letter-spacing: -0.038em; font-weight: 700; }
+  h2 { font-size: clamp(42px, 5.4vw, 84px); line-height: 1; letter-spacing: -0.032em; font-weight: 700; margin-bottom: 24px; }
+  h1 em, h2 em, .serif-accent {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; padding-right: 0.08em;
+    background: linear-gradient(92deg, #e3a17f 0%, #b59cea 48%, #3858e9 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  html[data-tile="dusk"] h1 em, html[data-tile="dusk"] h2 em, html[data-tile="dusk"] .serif-accent {
+    background-image: linear-gradient(92deg, #f2c1a4 0%, #cdb8ff 48%, #8aa4ff 100%);
+  }
+  .lede { font-size: clamp(19px, 1.6vw, 25px); line-height: 1.35; color: var(--muted); margin-top: 24px; max-width: 36ch; font-weight: 500; letter-spacing: -0.012em; }
+  .apple { font-size: clamp(19px, 1.5vw, 24px); line-height: 1.42; color: var(--muted); font-weight: 500; letter-spacing: -0.014em; }
+  .apple b { color: var(--text); font-weight: 600; }
+  .apple code, .lede code { font-family: var(--font-code); font-size: 0.8em; padding: 0.08em 0.38em; border-radius: 7px; background: var(--hairline); color: var(--text); }
+  .kicker { font-family: var(--font-hud); font-size: 12px; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 18px; }
+  .fine { font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.03em; color: var(--muted); margin-top: 20px; line-height: 1.6; }
+  .hint { font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.04em; color: var(--accent); margin-top: 16px; }
+  .scrollcue { font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.1em; color: var(--muted); margin-top: 40px; text-transform: uppercase; }
+  .note { display: flex; gap: 10px; align-items: flex-start; margin-top: 28px; font-family: var(--font-hand); font-size: 27px; line-height: 1.1; color: var(--accent); transform: rotate(-2.2deg); transform-origin: left; }
+  .note svg { flex: none; margin-top: -6px; }
+  .note svg path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .on-touch { display: none; }
+  @media (hover: none) { .on-hover { display: none; } .on-touch { display: inline; } }
+  .titlebug { font-family: var(--font-hud); font-size: 12px; color: var(--coral); margin-top: 14px; display: none; }
+  .titlebug.on { display: block; }
+
+  .bell-act { min-height: 175vh; }
+  .tubes-act { min-height: 195vh; }
+  .end-act { min-height: 110vh; }
+
+  /* ---------- style tile ---------- */
+  .tile { position: relative; z-index: 2; background: var(--bg); padding: 120px clamp(20px, 8vw, 150px) 160px; transition: background-color 0.6s; }
+  .tile h3 { font-family: var(--font-hud); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 64px 0 22px; font-weight: 400; }
+  .tile .title { font-size: clamp(40px, 5vw, 76px); letter-spacing: -0.03em; font-weight: 700; line-height: 1; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .sw { border-radius: 18px; overflow: hidden; border: 1px solid var(--hairline); }
+  .sw .chip { height: 92px; }
+  .sw .meta { padding: 10px 12px; font-family: var(--font-hud); font-size: 11px; line-height: 1.5; letter-spacing: 0.03em; }
+  .sw .meta span { color: var(--muted); display: block; }
+  .type-row { display: grid; grid-template-columns: 160px 1fr; gap: 24px; align-items: baseline; padding: 22px 0; border-top: 1px solid var(--hairline); }
+  .type-row .k { font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; }
+  .t-display { font-size: clamp(40px, 5vw, 72px); font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
+  .t-serif { font-family: var(--font-serif); font-style: italic; font-size: clamp(40px, 5vw, 72px); line-height: 1; }
+  .t-body { font-size: 19px; line-height: 1.5; color: var(--muted); max-width: 60ch; font-weight: 500; }
+  .t-body b { color: var(--text); font-weight: 600; }
+  .t-code { font-family: var(--font-code); font-size: 15px; }
+  .t-hud { font-family: var(--font-hud); font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .t-hand { font-family: var(--font-hand); font-size: 32px; color: var(--accent); }
+  .components { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .btn { appearance: none; border: 0; cursor: pointer; font: 600 17px/1 var(--font-display); letter-spacing: -0.01em; padding: 14px 24px; border-radius: 999px; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.ghost { background: transparent; color: var(--text); border: 1.5px solid var(--text); }
+  .btn.pill-hud { font: 400 12px/1 var(--font-hud); letter-spacing: 0.08em; text-transform: uppercase; background: transparent; border: 1.5px solid var(--text); color: var(--text); padding: 10px 16px; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-code); font-size: 14px; padding: 8px 14px 8px 10px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--panel); }
+  .badge svg { width: 18px; height: 18px; }
+  .badge svg path, .badge svg rect, .badge svg circle { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .badge .type { font-family: var(--font-hud); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .origin { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px; color: #1d1d1f; }
+  details.expander { max-width: 680px; border: 1px solid var(--hairline); border-radius: 20px; padding: 18px 22px; background: var(--panel); }
+  details.expander summary { cursor: pointer; list-style: none; font-weight: 600; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+  details.expander summary::-webkit-details-marker { display: none; }
+  details.expander summary::after { content: "+"; font-family: var(--font-hud); font-size: 18px; color: var(--muted); transition: transform 0.3s; }
+  details.expander[open] summary::after { transform: rotate(45deg); }
+  details.expander pre { margin-top: 16px; font-family: var(--font-code); font-size: 13.5px; line-height: 1.65; overflow-x: auto; padding: 16px 18px; border-radius: 14px; background: #1d1d1f; color: #e8e8ed; }
+  html[data-tile="dusk"] details.expander pre { background: #05070b; }
+  .tok-k { color: #ff7ab2; } .tok-f { color: #67b7a4; } .tok-s { color: #ffa14f; } .tok-c { color: #7f8c98; font-style: italic; } .tok-n { color: #d9c97c; }
+  .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; max-width: 900px; }
+  .compare .card { border: 1px solid var(--hairline); border-radius: 20px; padding: 20px; background: var(--panel); }
+  .compare .card b { display: block; margin-bottom: 8px; font-size: 18px; }
+  .compare .card p { color: var(--muted); font-size: 15.5px; line-height: 1.5; font-weight: 500; }
+  .compare .card .status { font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.05em; margin-top: 12px; text-transform: uppercase; color: var(--accent); }
+
+  .no-webgl #stage, .no-webgl #hud { display: none; }
+
+  /* Tablet landscape / small laptop: text column narrows, rail loses its labels */
+  @media (min-width: 761px) and (max-width: 1180px) and (orientation: landscape) {
+    .act { padding-left: 64px; }
+    .copy { max-width: 44vw; }
+    .rail i[data-label]::after { display: none; }
+    .rail { left: 18px; }
+  }
+  /* Wide screens: keep line lengths sane and give the machine more room */
+  @media (min-width: 1800px) {
+    .act { padding-left: 9vw; }
+    .copy { max-width: 600px; }
+  }
+  /* Stacked layout: phones and portrait tablets (scene on top, copy sheet below) */
+  @media (max-width: 760px), (orientation: portrait) and (max-width: 1180px) {
+    .act { padding: 0 16px; align-items: flex-end; padding-bottom: 9vh; }
+    .act.tall .copy { top: auto; bottom: 6vh; }
+    .act.tall { align-items: flex-end; }
+    .copy { background: var(--panel); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); padding: 20px 20px 22px; border-radius: 24px; border: 1px solid var(--hairline); }
+    .hero .copy { background: transparent; border: 0; padding: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .rail, .legend, .seg .label, .logo span, .scrim { display: none; }
+    #hud { z-index: 1; }
+    header.bar { align-items: flex-start; }
+    .controls { gap: 6px; }
+    .seg button { padding: 6px 9px; font-size: 10px; }
+    .note { font-size: 23px; }
+    .type-row { grid-template-columns: 1fr; gap: 8px; }
+    .wpfooter { left: 16px; right: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<!--
+  ╭───────────────────────────────────────────────╮
+  │  hooked · design round 1                      │
+  │  This page is throwaway. The real one will    │
+  │  run on @wordpress/hooks. Try the console.    │
+  ╰───────────────────────────────────────────────╯
+-->
+<canvas id="stage" aria-hidden="true"></canvas>
+<div class="dots" aria-hidden="true"></div>
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<div id="hud" aria-hidden="true">
+  <svg><path id="line-bell" /><circle id="dot-bell" r="3" /><path id="line-tubes" /><circle id="dot-tubes" r="3" /></svg>
+  <div class="callout" id="callout-bell">
+    <div><span class="k">HOOK</span>init</div>
+    <div><span class="k">TYPE</span>ACTION · do_action()</div>
+    <div><span class="k">CALLBACKS</span>6 · P0 → P20</div>
+    <div><span class="k">FIRED IN</span>wp-settings.php</div>
+  </div>
+  <div class="callout" id="callout-tubes">
+    <div><span class="k">HOOK</span>the_title</div>
+    <div><span class="k">TYPE</span>FILTER · apply_filters()</div>
+    <div><span class="k">CHAIN</span>P10 → P11 → P20</div>
+    <div><span class="k">RETURNS</span>THE FILTERED TITLE</div>
+  </div>
+  <div class="marble-label" id="marble-label"><span class="pulse">GET /hello-world/</span></div>
+</div>
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<header class="bar">
+  <div class="logo">hooked<span>/design-round-1</span></div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Style tile">
+      <span class="label">Tile</span>
+      <button type="button" data-tile="day" aria-pressed="true">Porcelain Day</button>
+      <button type="button" data-tile="dusk" aria-pressed="false">Dusk Core</button>
+    </div>
+    <div class="seg" role="group" aria-label="Display typeface">
+      <span class="label">Type</span>
+      <button type="button" data-font="inter" aria-pressed="true">Inter</button>
+      <button type="button" data-font="geist" aria-pressed="false">Geist</button>
+    </div>
+    <div class="seg" role="group" aria-label="Ambient occlusion">
+      <span class="label">Soft AO</span>
+      <button type="button" data-ao="on" aria-pressed="true">On</button>
+      <button type="button" data-ao="off" aria-pressed="false">Off</button>
+    </div>
+  </div>
+</header>
+
+<nav class="rail fadeable" id="rail" aria-hidden="true"></nav>
+<div class="legend fadeable" id="legend" aria-label="Color legend">
+  <span><b style="background: var(--porcelain)"></b>core</span>
+  <span><b style="background: var(--lilac)"></b>plugin</span>
+  <span><b style="background: var(--mint)"></b>theme</span>
+</div>
+<div class="wpfooter" id="wpfooter">0 hooks fired · 0 queries · 0.000s</div>
+
+<main>
+  <section id="hero" class="act hero" data-t0="-0.04" data-t1="0.06" data-act="hero">
+    <div class="copy">
+      <p class="eyebrow">Chapter 01 · The journey of a request</p>
+      <h1 id="hero-title">What happens when you visit a <em>WordPress</em> site?</h1>
+      <p class="titlebug" id="titlebug">⚠ your filter returned nothing, so the title is gone. That's the #1 filter bug.</p>
+      <p class="lede">Follow one request through WordPress core, from <code>index.php</code> to the last byte of HTML.</p>
+      <p class="scrollcue">Scroll to drop the marble ↓</p>
+    </div>
+  </section>
+
+  <section id="bell" class="act tall bell-act" data-t0="0.06" data-t1="0.5" data-act="bell">
+    <div class="copy">
+      <p class="kicker">HOOK 01 · do_action( 'init' )</p>
+      <h2>This is an <em>action.</em></h2>
+      <p class="apple">
+        <b>WordPress rings a bell at key moments.</b> When it reaches <code>init</code>, every function hooked to that
+        moment runs, lowest priority number first. Actions don't hand anything back. They're a chance to do something.
+      </p>
+      <div class="note">
+        <svg width="46" height="40" viewBox="0 0 46 40" aria-hidden="true"><path d="M4 6 C 18 4, 30 12, 36 30 M36 30 l-9 -4 M36 30 l2 -9" /></svg>
+        <span>Same priority?<br />First added, first run.</span>
+      </div>
+      <p class="hint"><span class="on-hover">Click the bell to ring it again · hover a module to see who hooked in</span><span class="on-touch">Tap the bell to ring it again · tap a module to see who hooked in</span></p>
+    </div>
+  </section>
+
+  <section id="tubes" class="act tall tubes-act" data-t0="0.5" data-t1="0.93" data-act="tubes">
+    <div class="copy">
+      <p class="kicker">HOOK 02 · apply_filters( 'the_title', $title )</p>
+      <h2>This is a <em>filter.</em></h2>
+      <p class="apple">
+        <b>A filter passes a value through every callback.</b> Each one receives the current value and has to return it,
+        changed or not, to the next. Watch the title change as it travels through the tubes.
+      </p>
+      <div class="note">
+        <svg width="46" height="40" viewBox="0 0 46 40" aria-hidden="true"><path d="M4 6 C 18 4, 30 12, 36 30 M36 30 l-9 -4 M36 30 l2 -9" /></svg>
+        <span>Forget the <code style="font-family: var(--font-code); font-size: 0.6em">return</code><br />and the next tube gets null.</span>
+      </div>
+      <p class="fine">Simplified: core also runs convert_chars and trim on the_title at P10.</p>
+    </div>
+  </section>
+
+  <section id="end" class="act end-act" data-t0="0.93" data-t1="1" data-act="end">
+    <div class="copy">
+      <p class="kicker">200 OK · HTML SENT</p>
+      <h2>That's the <em>feel.</em></h2>
+      <p class="apple">
+        <b>This round is about the look and feel:</b> type, color, light and motion. The full story follows hundreds of
+        hooks across the whole lifecycle. Pick what you like in the controls above, then check the style tile below.
+      </p>
+    </div>
+  </section>
+</main>
+
+<section class="tile" id="tile">
+  <p class="eyebrow">Style tile · round 1</p>
+  <p class="title">Porcelain <span class="serif-accent">Machine</span></p>
+
+  <h3>Palette</h3>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#F5F5F7"></div><div class="meta">Day canvas<span>#F5F5F7</span></div></div>
+    <div class="sw"><div class="chip" style="background:#1D1D1F"></div><div class="meta">Ink<span>#1D1D1F</span></div></div>
+    <div class="sw"><div class="chip" style="background:#0E1117"></div><div class="meta">Dusk core<span>#0E1117</span></div></div>
+    <div class="sw"><div class="chip" style="background:#3858E9"></div><div class="meta">WP blue · accent<span>#3858E9</span></div></div>
+    <div class="sw"><div class="chip" style="background:#F2F0EB"></div><div class="meta">Porcelain · core<span>#F2F0EB</span></div></div>
+    <div class="sw"><div class="chip" style="background:#C9B3F5"></div><div class="meta">Lilac · plugin<span>#C9B3F5</span></div></div>
+    <div class="sw"><div class="chip" style="background:#9FE0C8"></div><div class="meta">Mint · theme<span>#9FE0C8</span></div></div>
+    <div class="sw"><div class="chip" style="background:#F3DC8C"></div><div class="meta">Butter · mu-plugin<span>#F3DC8C</span></div></div>
+    <div class="sw"><div class="chip" style="background:#F4A99A"></div><div class="meta">Coral · drop-in<span>#F4A99A</span></div></div>
+  </div>
+
+  <h3>Type</h3>
+  <div class="type-row"><span class="k">Display · <span id="font-name">Inter</span></span><span class="t-display">Hooks, explained.</span></div>
+  <div class="type-row"><span class="k">Accent · Instrument Serif</span><span class="t-serif">the journey of a request</span></div>
+  <div class="type-row"><span class="k">Body</span><span class="t-body"><b>Filters change things. Actions do things.</b> Every plugin you've ever installed works by hooking into one or the other.</span></div>
+  <div class="type-row"><span class="k">Code · JetBrains Mono</span><span class="t-code">add_filter( 'the_title', 'ucwords', 20 );</span></div>
+  <div class="type-row"><span class="k">HUD · Departure Mono</span><span class="t-hud">HOOK init · ACTION · P10 · wp-settings.php</span></div>
+  <div class="type-row"><span class="k">Margin note · Caveat</span><span class="t-hand">← everyone gets this one wrong</span></div>
+
+  <h3>Components</h3>
+  <div class="components">
+    <button class="btn primary" type="button">Start the journey</button>
+    <button class="btn ghost" type="button">Open the Hook Lab</button>
+    <button class="btn pill-hud" type="button">Developer mode</button>
+  </div>
+  <div class="components" style="margin-top: 18px">
+    <span class="badge">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
+      init <span class="type">action</span>
+    </span>
+    <span class="badge">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="4" /><path d="M9 8v8M15 8v8" /></svg>
+      the_title <span class="type">filter</span>
+    </span>
+    <span class="origin" style="background: var(--porcelain); border: 1px solid rgba(0,0,0,.08)">core</span>
+    <span class="origin" style="background: var(--lilac)">plugin</span>
+    <span class="origin" style="background: var(--mint)">theme</span>
+    <span class="origin" style="background: var(--butter)">mu-plugin</span>
+    <span class="origin" style="background: var(--coral)">drop-in</span>
+  </div>
+  <div style="margin-top: 22px">
+    <details class="expander">
+      <summary>Under the hood: what <code style="font-family: var(--font-code); font-weight: 400">add_action</code> really is</summary>
+<pre><span class="tok-c">// wp-includes/plugin.php (simplified)</span>
+<span class="tok-k">function</span> <span class="tok-f">add_action</span>( $hook_name, $callback, $priority = <span class="tok-n">10</span>, $accepted_args = <span class="tok-n">1</span> ) {
+    <span class="tok-k">return</span> <span class="tok-f">add_filter</span>( $hook_name, $callback, $priority, $accepted_args );
+}</pre>
+    </details>
+  </div>
+
+  <h3>Shading: procedural vs baked</h3>
+  <div class="compare">
+    <div class="card"><b>Real-time soft AO</b><p>Shading is calculated live in the browser. Toggle "Soft AO" in the top bar to see the difference on the bell, modules and track.</p><p class="status">Live on this page</p></div>
+    <div class="card"><b>Blender-baked</b><p>Soft light and contact shadows are baked into textures ahead of time, like a product render. Lighter at runtime, but it needs Blender to produce.</p><p class="status">Pending: needs Blender installed</p></div>
+  </div>
+</section>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+</script>
+<script type="module">
+  import * as THREE from "three";
+  import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+  import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+  import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+  import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+  import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+  import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+  import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+  const $ = (sel) => document.querySelector(sel);
+  const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const STACKED_QUERY = matchMedia("(max-width: 760px), (orientation: portrait) and (max-width: 1180px)");
+  const isMobile = () => STACKED_QUERY.matches;
+  const layoutMode = () => (isMobile() ? "stacked" : innerWidth <= 1180 ? "tablet" : innerWidth >= 1800 ? "wide" : "desktop");
+  const CAMERA = {
+    stacked: { shift: 0, lift: 5.2, dist: 16.5, lookY: -2.6, heroPos: [-0.6, 10.5, 33], heroLook: [-0.6, -1.4, 0] },
+    tablet: { shift: -2.9, lift: 4.8, dist: 14.6, lookY: -0.2, heroPos: [0.8, 8.8, 31], heroLook: [0.8, -1.3, 0] },
+    desktop: { shift: -3.1, lift: 4.6, dist: 13.2, lookY: -0.2, heroPos: [0.8, 8.2, 27], heroLook: [0.8, -1.3, 0] },
+    wide: { shift: -3.8, lift: 4.4, dist: 12.6, lookY: -0.2, heroPos: [0.8, 7.8, 25], heroLook: [0.8, -1.2, 0] },
+  };
+  const clamp01 = (x) => Math.min(1, Math.max(0, x));
+  const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+  /* ============================================================
+     Page hooks: a tiny @wordpress/hooks-shaped API (easter egg)
+     ============================================================ */
+  function createHooks(onFire) {
+    let registry = new Map();
+    let seq = 0;
+    let fired = 0;
+    const listeners = new Set();
+    const list = (name) => registry.get(name) ?? [];
+    const notify = (name) => listeners.forEach((fn) => fn(name));
+    const api = {
+      addFilter(hookName, namespace, callback, priority = 10) {
+        if (typeof hookName !== "string" || typeof callback !== "function") {
+          throw new TypeError("addFilter(hookName: string, namespace: string, callback: function, priority?: number)");
+        }
+        const entry = { namespace: String(namespace), callback, priority: Number(priority) || 10, seq: seq++ };
+        const next = [...list(hookName), entry].sort((a, b) => a.priority - b.priority || a.seq - b.seq);
+        registry = new Map(registry).set(hookName, next);
+        notify(hookName);
+        return true;
+      },
+      addAction(...args) { return api.addFilter(...args); },
+      removeFilter(hookName, namespace) {
+        const before = list(hookName);
+        const next = before.filter((h) => h.namespace !== namespace);
+        registry = new Map(registry).set(hookName, next);
+        notify(hookName);
+        return before.length - next.length;
+      },
+      removeAction(...args) { return api.removeFilter(...args); },
+      applyFilters(hookName, value, ...args) {
+        fired += 1; onFire(fired);
+        return list(hookName).reduce((current, h) => {
+          try { return h.callback(current, ...args); }
+          catch (err) { console.error(`[hooked] filter "${hookName}" from "${h.namespace}" threw:`, err); return current; }
+        }, value);
+      },
+      doAction(hookName, ...args) {
+        fired += 1; onFire(fired);
+        list(hookName).forEach((h) => {
+          try { h.callback(...args); }
+          catch (err) { console.error(`[hooked] action "${hookName}" from "${h.namespace}" threw:`, err); }
+        });
+      },
+      hasFilter(hookName) { return list(hookName).length > 0; },
+    };
+    return { api, subscribe: (fn) => listeners.add(fn) };
+  }
+
+  const t0 = performance.now();
+  let firstFrameSecs = null;
+  const footer = $("#wpfooter");
+  let firedCount = 0;
+  const renderFooter = (n = firedCount) => {
+    firedCount = n;
+    const secs = (firstFrameSecs ?? (performance.now() - t0) / 1000).toFixed(3);
+    footer.textContent = `${n} hooks fired · 0 queries · ${secs}s`;
+  };
+  const hooks = createHooks(renderFooter);
+  window.wp = Object.freeze({ hooks: hooks.api });
+
+  const HERO_DEFAULT = "What happens when you visit a WordPress site?";
+  function renderHeroTitle() {
+    const raw = hooks.api.applyFilters("hooked.heroTitle", HERO_DEFAULT);
+    const empty = raw === null || raw === undefined || String(raw).trim() === "";
+    $("#titlebug").classList.toggle("on", empty);
+    $("#hero-title").innerHTML = empty ? "∅" : escapeHtml(String(raw)).replace(/(wordpress)/i, "<em>$1</em>");
+  }
+  hooks.subscribe((name) => { if (name === "hooked.heroTitle") renderHeroTitle(); });
+  renderHeroTitle();
+
+  console.log(
+    "%c hooked %c This page runs on hooks too.\n\n  Try:  wp.hooks.addFilter( 'hooked.heroTitle', 'me', t => t.toUpperCase() )\n  Undo: wp.hooks.removeFilter( 'hooked.heroTitle', 'me' )\n  Bug:  wp.hooks.addFilter( 'hooked.heroTitle', 'oops', t => { t + '!' } )  // forgot to return\n",
+    "background:#3858E9;color:#fff;padding:2px 6px;border-radius:4px;font-family:monospace",
+    "font-family:monospace"
+  );
+
+  const toastEl = $("#toast");
+  let toastTimer = 0;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("on"), 1800);
+  }
+
+  /* ============================================================
+     Data (illustrative; the real site generates this per WP version)
+     ============================================================ */
+  const ORIGIN = { core: "#F2F0EB", plugin: "#C9B3F5", theme: "#9FE0C8" };
+  const INIT_CALLBACKS = [
+    { fn: "create_initial_post_types", priority: 0, origin: "core" },
+    { fn: "wp_widgets_init", priority: 1, origin: "core" },
+    { fn: "smilies_init", priority: 5, origin: "core" },
+    { fn: "rest_api_init", priority: 10, origin: "core" },
+    { fn: "acme_register_cpt", priority: 10, origin: "plugin", demo: true },
+    { fn: "mytheme_init", priority: 20, origin: "theme", demo: true },
+  ];
+  const TITLE_INPUT = "Wordpress isn't hard";
+  const TITLE_FILTERS = [
+    { fn: "wptexturize", priority: 10, origin: "core", out: "Wordpress isn’t hard", does: "straight quote → curly ’" },
+    { fn: "capital_P_dangit", priority: 11, origin: "core", out: "WordPress isn’t hard", does: "'Wordpress' → 'WordPress'" },
+    { fn: "acme_add_badge", priority: 20, origin: "plugin", out: "WordPress isn’t hard ✦", does: "appends a badge (demo plugin)", demo: true },
+  ];
+  const BELL_T = 0.4;
+  const TUBE_RANGES = [[0.6, 0.68], [0.7, 0.78], [0.8, 0.88]];
+
+  const PALETTES = {
+    day: {
+      bg: "#F5F5F7", fogNear: 24, fogFar: 52, porcelain: "#F2F0EB", env: 1.0, key: 2.4, keyColor: "#ffffff",
+      hemi: 0.55, shadow: 0.1, bloom: false, marbleEmissive: "#000000", marbleGlow: 0, ring: "#3858E9", litGlow: 0.35,
+    },
+    dusk: {
+      bg: "#0E1117", fogNear: 11, fogFar: 34, porcelain: "#D8DDE6", env: 0.32, key: 1.2, keyColor: "#A8BBFF",
+      hemi: 0.22, shadow: 0.42, bloom: true, marbleEmissive: "#4F6BFF", marbleGlow: 1.8, ring: "#8AA4FF", litGlow: 0.55,
+    },
+  };
+
+  /* ============================================================
+     Scroll story wiring (DOM). Works even if WebGL fails.
+     ============================================================ */
+  const sections = [...document.querySelectorAll("main .act")];
+  const rail = $("#rail");
+  const TICKS = 28;
+  const railLabels = { 0: "request", [Math.round(BELL_T * (TICKS - 1))]: "init", [Math.round(0.74 * (TICKS - 1))]: "the_title", [TICKS - 1]: "sent" };
+  for (let i = 0; i < TICKS; i++) {
+    const tick = document.createElement("i");
+    if (railLabels[i]) tick.dataset.label = railLabels[i];
+    rail.appendChild(tick);
+  }
+  const ticks = [...rail.children];
+
+  const DEBUG_T = new URLSearchParams(location.search).get("t");
+  function scrollTarget() {
+    if (DEBUG_T !== null) {
+      const t = clamp01(Number(DEBUG_T));
+      return { t, act: t < 0.06 ? "hero" : t < 0.5 ? "bell" : t < 0.93 ? "tubes" : "end" };
+    }
+    const mid = innerHeight * 0.5;
+    for (const sec of sections) {
+      const r = sec.getBoundingClientRect();
+      if (r.top <= mid && r.bottom > mid) {
+        const local = clamp01((mid - r.top) / r.height);
+        return { t: lerp(Number(sec.dataset.t0), Number(sec.dataset.t1), local), act: sec.dataset.act };
+      }
+    }
+    const last = sections[sections.length - 1].getBoundingClientRect();
+    return last.bottom <= mid ? { t: 1, act: "tile" } : { t: 0, act: "hero" };
+  }
+
+  let currentAct = "hero";
+  function setAct(act) {
+    if (act === currentAct) return;
+    currentAct = act;
+    hooks.api.doAction("hooked.act", act);
+  }
+
+  /* ============================================================
+     Toggles
+     ============================================================ */
+  const state = { tile: "day", ao: !isMobile() };
+  function pressGroup(attr, value) {
+    document.querySelectorAll(`[data-${attr}]`).forEach((b) => {
+      if (b.tagName === "BUTTON") b.setAttribute("aria-pressed", String(b.dataset[attr] === value));
+    });
+  }
+  pressGroup("ao", state.ao ? "on" : "off");
+
+  /* ============================================================
+     3D scene
+     ============================================================ */
+  let renderer = null;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas: $("#stage"), antialias: true, powerPreference: "high-performance" });
+  } catch (err) {
+    console.error("[hooked] WebGL unavailable, showing text-only page.", err);
+    document.documentElement.classList.add("no-webgl");
+  }
+
+  const api3d = renderer ? buildScene(renderer) : null;
+  const params = new URLSearchParams(location.search);
+
+  document.querySelectorAll("button[data-tile]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.tile = b.dataset.tile;
+      document.documentElement.dataset.tile = state.tile;
+      pressGroup("tile", state.tile);
+      api3d?.applyPalette(PALETTES[state.tile]);
+      hooks.api.doAction("switch_theme", state.tile);
+      toast(`do_action( 'switch_theme', '${state.tile === "day" ? "porcelain-day" : "dusk-core"}' )`);
+    })
+  );
+  document.querySelectorAll("button[data-font]").forEach((b) =>
+    b.addEventListener("click", () => {
+      document.documentElement.dataset.font = b.dataset.font;
+      pressGroup("font", b.dataset.font);
+      $("#font-name").textContent = b.dataset.font === "inter" ? "Inter" : "Geist";
+    })
+  );
+  document.querySelectorAll("button[data-ao]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.ao = b.dataset.ao === "on";
+      pressGroup("ao", b.dataset.ao);
+      api3d?.setAO(state.ao);
+    })
+  );
+  if (params.get("tile") === "dusk") document.querySelector('button[data-tile="dusk"]').click();
+  if (params.get("font") === "geist") document.querySelector('button[data-font="geist"]').click();
+  if (params.get("ao") === "off") document.querySelector('button[data-ao="off"]').click();
+
+  /* Neutral tone mapping (mirrors three's shader) and its numeric inverse, so the
+     canvas background lands on exactly the same sRGB value as the CSS page background. */
+  function neutralToneMap([r, g, b]) {
+    const start = 0.8 - 0.04, desat = 0.15;
+    const x = Math.min(r, g, b);
+    const offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    let c = [r - offset, g - offset, b - offset];
+    const peak = Math.max(...c);
+    if (peak < start) return c;
+    const d = 1 - start;
+    const newPeak = 1 - (d * d) / (peak + d - start);
+    c = c.map((ch) => ch * (newPeak / peak));
+    const mix = 1 - 1 / (desat * (peak - newPeak) + 1);
+    return c.map((ch) => ch + (newPeak - ch) * mix);
+  }
+  function toneCompensated(hex) {
+    const target = new THREE.Color(hex);
+    const goal = [target.r, target.g, target.b];
+    let guess = [...goal];
+    for (let i = 0; i < 60; i++) {
+      const out = neutralToneMap(guess);
+      guess = guess.map((ch, k) => Math.max(0, ch + (goal[k] - out[k])));
+    }
+    return new THREE.Color(guess[0], guess[1], guess[2]);
+  }
+
+  function buildScene(renderer) {
+    const v = (x, y, z) => new THREE.Vector3(x, y, z);
+    const UP = v(0, 1, 0);
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.background = toneCompensated(PALETTES.day.bg);
+    scene.fog = new THREE.Fog(toneCompensated(PALETTES.day.bg), PALETTES.day.fogNear, PALETTES.day.fogFar);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 120);
+
+    const hemi = new THREE.HemisphereLight("#ffffff", "#d9d4cc", 0.55);
+    scene.add(hemi);
+    const key = new THREE.DirectionalLight("#ffffff", 2.4);
+    key.position.set(-6, 14, 9);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -16; key.shadow.camera.right = 16;
+    key.shadow.camera.top = 10; key.shadow.camera.bottom = -10;
+    key.shadow.camera.near = 1; key.shadow.camera.far = 40;
+    key.shadow.bias = -0.0004;
+    key.shadow.normalBias = 0.02;
+    scene.add(key);
+
+    /* ---- materials ---- */
+    const porcelain = new THREE.MeshPhysicalMaterial({
+      color: PALETTES.day.porcelain, roughness: 0.42, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.32,
+    });
+    const groundMat = new THREE.ShadowMaterial({ opacity: PALETTES.day.shadow });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const add = (geo, mat, pos, opts = {}) => {
+      const m = new THREE.Mesh(geo, mat);
+      if (pos) m.position.copy(pos);
+      m.castShadow = opts.cast ?? true;
+      m.receiveShadow = opts.receive ?? true;
+      (opts.parent ?? scene).add(m);
+      return m;
+    };
+
+    /* ---- the track (marble path + two rails + supports) ---- */
+    const path = new THREE.CatmullRomCurve3(
+      [v(-10, 4.4, 0), v(-7, 3.5, 0.5), v(-4, 2.6, 0), v(-1.5, 2.0, -0.3), v(1, 1.6, -0.2), v(3.5, 1.3, 0.2), v(6, 1.05, 0.3), v(8.5, 0.85, 0), v(11.5, 0.65, -0.2)],
+      false, "centripetal"
+    );
+    const MARBLE_R = 0.26, RAIL_GAP = 0.2, RAIL_DROP = 0.22, RAIL_R = 0.045;
+    const frameAt = (t) => {
+      const p = path.getPointAt(t);
+      const tan = path.getTangentAt(t);
+      const side = new THREE.Vector3().crossVectors(tan, UP).normalize();
+      return { p, tan, side };
+    };
+    const railCurve = (sign) => {
+      const pts = [];
+      for (let i = 0; i <= 220; i++) {
+        const { p, side } = frameAt(i / 220);
+        pts.push(p.clone().addScaledVector(side, sign * RAIL_GAP).addScaledVector(UP, -RAIL_DROP));
+      }
+      return new THREE.CatmullRomCurve3(pts);
+    };
+    [-1, 1].forEach((s) => add(new THREE.TubeGeometry(railCurve(s), 400, RAIL_R, 14, false), porcelain));
+
+    const crossGeo = new RoundedBoxGeometry(RAIL_GAP * 2 + 0.16, 0.08, 0.12, 3, 0.03);
+    const footGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.06, 28);
+    for (let t = 0.03; t < 1; t += 0.065) {
+      const { p, tan } = frameAt(t);
+      const under = p.clone().addScaledVector(UP, -RAIL_DROP - 0.06);
+      const cross = add(crossGeo, porcelain, under);
+      cross.lookAt(under.clone().add(tan));
+      const h = under.y;
+      add(new THREE.CylinderGeometry(0.045, 0.05, h, 16), porcelain, v(under.x, h / 2, under.z));
+      add(footGeo, porcelain, v(under.x, 0.03, under.z));
+    }
+
+    /* ---- the bell (action: init) ---- */
+    const bell = frameAt(BELL_T);
+    const pivotY = bell.p.y + MARBLE_R + 0.95;
+    const frameGroup = new THREE.Group();
+    scene.add(frameGroup);
+    [-1, 1].forEach((s) => {
+      const base = bell.p.clone().addScaledVector(bell.side, s * 0.85);
+      add(new THREE.CylinderGeometry(0.06, 0.07, pivotY + 0.12, 18), porcelain, v(base.x, (pivotY + 0.12) / 2, base.z), { parent: frameGroup });
+      add(footGeo, porcelain, v(base.x, 0.03, base.z), { parent: frameGroup });
+    });
+    const beam = add(new THREE.CylinderGeometry(0.06, 0.06, 1.84, 18), porcelain, v(bell.p.x, pivotY + 0.1, bell.p.z), { parent: frameGroup });
+    beam.quaternion.setFromUnitVectors(UP, bell.side);
+
+    const pivot = new THREE.Group();
+    pivot.position.set(bell.p.x, pivotY, bell.p.z);
+    pivot.quaternion.setFromUnitVectors(v(1, 0, 0), bell.side);
+    scene.add(pivot);
+    const swing = new THREE.Group();
+    pivot.add(swing);
+    const BELL_H = 0.78;
+    const profile = [[0.0, 1.0], [0.1, 0.99], [0.2, 0.93], [0.26, 0.8], [0.29, 0.6], [0.33, 0.4], [0.42, 0.17], [0.5, 0.05], [0.53, 0.0], [0.5, 0.0]]
+      .map(([r, y]) => new THREE.Vector2(r * 0.95, y * BELL_H));
+    const bellMat = porcelain.clone();
+    bellMat.side = THREE.DoubleSide;
+    const bellMesh = add(new THREE.LatheGeometry(profile, 72), bellMat, v(0, -BELL_H - 0.02, 0), { parent: swing });
+    bellMesh.userData.info = { title: "init", lines: ["ACTION · do_action( 'init' )", "6 callbacks · P0 → P20", "click to ring"], kind: "bell" };
+    add(new THREE.SphereGeometry(0.07, 20, 16), porcelain, v(0, -0.02, 0), { parent: swing });
+
+    const ringMats = [];
+    const rings = [0, 1, 2].map(() => {
+      const mat = new THREE.MeshBasicMaterial({ color: PALETTES.day.ring, transparent: true, opacity: 0, depthWrite: false });
+      ringMats.push(mat);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.012, 8, 96), mat);
+      ring.position.set(bell.p.x, pivotY - BELL_H + 0.05, bell.p.z);
+      ring.rotation.x = Math.PI / 2;
+      scene.add(ring);
+      return ring;
+    });
+
+    /* ---- the dock of callback modules ---- */
+    const dockCenter = bell.p.clone().addScaledVector(bell.side, -1.9);
+    dockCenter.y = 0;
+    const dockGroup = new THREE.Group();
+    dockGroup.position.copy(dockCenter);
+    dockGroup.quaternion.setFromUnitVectors(v(1, 0, 0), bell.tan.clone().setY(0).normalize());
+    scene.add(dockGroup);
+    add(new RoundedBoxGeometry(4.1, 0.18, 1.0, 4, 0.08), porcelain, v(0, 0.09, 0), { parent: dockGroup });
+    const moduleGeo = new RoundedBoxGeometry(0.46, 0.36, 0.46, 5, 0.1);
+    const modules = INIT_CALLBACKS.map((cb, i) => {
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: ORIGIN[cb.origin], roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.3, emissive: ORIGIN[cb.origin], emissiveIntensity: 0,
+      });
+      const m = add(moduleGeo, mat, v(-1.65 + i * 0.66, 0.36, 0), { parent: dockGroup });
+      m.userData = {
+        baseY: 0.36, lit: 0, target: 0,
+        info: { title: cb.fn, lines: [`${cb.origin}${cb.demo ? " (demo)" : ""} · priority ${cb.priority}`, "hooked to init"], kind: "module" },
+        tagText: `P${cb.priority}`,
+      };
+      return m;
+    });
+
+    const cableCurve = new THREE.CatmullRomCurve3([
+      bell.p.clone().addScaledVector(bell.side, -0.85).setY(0.05),
+      bell.p.clone().addScaledVector(bell.side, -1.25).setY(0.02),
+      dockCenter.clone().addScaledVector(bell.side, 0.5).setY(0.12),
+    ]);
+    add(new THREE.TubeGeometry(cableCurve, 40, 0.025, 8, false), porcelain);
+    const sparkMat = new THREE.MeshBasicMaterial({ color: PALETTES.day.ring, transparent: true, opacity: 0 });
+    const spark = add(new THREE.SphereGeometry(0.06, 16, 12), sparkMat, null, { cast: false, receive: false });
+
+    /* ---- the filter tubes (the_title) ---- */
+    const glassBase = {
+      transmission: 1, roughness: 0.07, metalness: 0, thickness: 0.35, ior: 1.42, side: THREE.DoubleSide,
+      clearcoat: 1, clearcoatRoughness: 0.05, attenuationDistance: 2.2,
+    };
+    const tubes = TUBE_RANGES.map(([a, b], i) => {
+      const f = TITLE_FILTERS[i];
+      const pts = [];
+      for (let k = 0; k <= 24; k++) pts.push(path.getPointAt(lerp(a, b, k / 24)));
+      const glass = new THREE.MeshPhysicalMaterial({ ...glassBase, color: "#ffffff", attenuationColor: ORIGIN[f.origin] });
+      const mesh = add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.44, 48, false), glass, null, { cast: false, receive: false });
+      mesh.userData.info = { title: f.fn, lines: [`${f.origin}${f.demo ? " (demo)" : ""} · priority ${f.priority}`, f.does], kind: "tube" };
+
+      const ringMat = new THREE.MeshPhysicalMaterial({ color: ORIGIN[f.origin], roughness: 0.38, clearcoat: 0.6, emissive: ORIGIN[f.origin], emissiveIntensity: 0 });
+      const collar = (t) => {
+        const { p, tan } = frameAt(t);
+        const c = add(new THREE.TorusGeometry(0.46, 0.06, 16, 64), ringMat, p);
+        c.quaternion.setFromUnitVectors(v(0, 0, 1), tan);
+        return c;
+      };
+      collar(a); collar(b);
+      const anchor = path.getPointAt(lerp(a, b, 0.5)).add(v(0, 0.46, -0.2));
+      return { mesh, ringMat, range: [a, b], filter: f, anchor, flash: 0 };
+    });
+
+    /* ---- the marble (the request) ---- */
+    const marbleMat = new THREE.MeshPhysicalMaterial({
+      color: "#ffffff", roughness: 0.1, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.04,
+      iridescence: 0.9, iridescenceIOR: 1.3, iridescenceThicknessRange: [120, 420], emissive: "#000000", emissiveIntensity: 0,
+    });
+    const marble = add(new THREE.SphereGeometry(MARBLE_R, 48, 32), marbleMat, null, { receive: false });
+
+    /* ---- post-processing ---- */
+    const composer = new EffectComposer(renderer);
+    composer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    composer.addPass(new RenderPass(scene, camera));
+    const gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
+    gtao.enabled = state.ao;
+    composer.addPass(gtao);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.55, 0.82);
+    bloom.enabled = false;
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+
+    let palette = PALETTES.day;
+    function applyPalette(p) {
+      palette = p;
+      scene.background.copy(toneCompensated(p.bg));
+      scene.fog.color.copy(toneCompensated(p.bg));
+      scene.fog.near = p.fogNear;
+      scene.fog.far = p.fogFar;
+      scene.environmentIntensity = p.env;
+      key.intensity = p.key;
+      key.color.set(p.keyColor);
+      hemi.intensity = p.hemi;
+      groundMat.opacity = p.shadow;
+      porcelain.color.set(p.porcelain);
+      bellMat.color.set(p.porcelain);
+      bloom.enabled = p.bloom;
+      marbleMat.emissive.set(p.marbleEmissive);
+      marbleMat.emissiveIntensity = p.marbleGlow;
+      ringMats.forEach((m) => m.color.set(p.ring));
+      sparkMat.color.set(p.ring);
+    }
+
+    /* ---- HUD elements ---- */
+    const hud = {
+      label: $("#marble-label"),
+      calloutBell: $("#callout-bell"), lineBell: $("#line-bell"), dotBell: $("#dot-bell"),
+      calloutTubes: $("#callout-tubes"), lineTubes: $("#line-tubes"), dotTubes: $("#dot-tubes"),
+    };
+    const hudLayer = $("#hud");
+    const moduleTags = modules.map((m) => {
+      const el = document.createElement("div");
+      el.className = "tag";
+      el.textContent = m.userData.tagText;
+      hudLayer.appendChild(el);
+      return el;
+    });
+    const tubeTags = tubes.map((tb) => {
+      const el = document.createElement("div");
+      el.className = "tag";
+      el.textContent = `${tb.filter.fn} · P${tb.filter.priority}`;
+      hudLayer.appendChild(el);
+      return el;
+    });
+    const toScreen = (p) => {
+      const q = p.clone().project(camera);
+      return { x: (q.x + 1) * 0.5 * innerWidth, y: (1 - q.y) * 0.5 * innerHeight, ok: q.z < 1 };
+    };
+    function placeCallout(anchorWorld, callout, line, dot, visible) {
+      const a = toScreen(anchorWorld);
+      const flip = a.x > innerWidth - 400;
+      const dir = flip ? -1 : 1;
+      const elbow = { x: a.x + 46 * dir, y: a.y - 96 };
+      const end = { x: elbow.x + 70 * dir, y: elbow.y };
+      line.setAttribute("d", `M${a.x},${a.y} L${elbow.x},${elbow.y} L${end.x},${end.y}`);
+      dot.setAttribute("cx", a.x); dot.setAttribute("cy", a.y);
+      callout.style.left = flip ? "auto" : `${end.x + 10}px`;
+      callout.style.right = flip ? `${innerWidth - end.x + 10}px` : "auto";
+      callout.style.textAlign = "left";
+      callout.style.top = `${end.y - 14}px`;
+      const on = visible && a.ok && !isMobile();
+      [callout, line, dot].forEach((el) => el.classList.toggle("on", on));
+    }
+
+    /* ---- interaction: hover + click ---- */
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2(2, 2);
+    const pickables = [bellMesh, ...modules, ...tubes.map((t) => t.mesh)];
+    const tooltip = $("#tooltip");
+    let hovered = null;
+    addEventListener("pointermove", (e) => {
+      pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+      tooltip.style.left = `${e.clientX}px`;
+      tooltip.style.top = `${e.clientY}px`;
+    });
+    $("#stage").addEventListener("click", () => { if (hovered?.userData.info?.kind === "bell") strike(true); });
+    let tapTimer = 0;
+    $("#stage").addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse") return;
+      pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+      tooltip.style.left = `${Math.min(e.clientX, innerWidth - 240)}px`;
+      tooltip.style.top = `${Math.max(e.clientY - 90, 70)}px`;
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObjects(pickables, false)[0]?.object;
+      if (hit?.userData.info?.kind === "bell") strike(true);
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => pointer.set(2, 2), 2600);
+    });
+
+    /* ---- bell strike + cascade ---- */
+    let swingTime = 99;
+    let cascadeStart = -99;
+    let ringTime = 99;
+    function strike(manual = false) {
+      swingTime = 0;
+      ringTime = 0;
+      cascadeStart = clock.elapsedTime;
+      modules.forEach((m) => { m.userData.lit = 0; });
+      hooks.api.doAction("hooked.bell", manual ? "manual" : "marble");
+    }
+
+    /* ---- resize ---- */
+    let lastW = 0, lastH = 0;
+    function resize() {
+      const touch = matchMedia("(pointer: coarse)").matches;
+      if (touch && innerWidth === lastW && Math.abs(innerHeight - lastH) < 160) return;
+      lastW = innerWidth; lastH = innerHeight;
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+    }
+    addEventListener("resize", resize);
+    resize();
+
+    /* ---- frame loop ---- */
+    const clock = new THREE.Clock();
+    let shownT = 0;
+    let prevT = 0;
+    let lastValueIndex = -1;
+    let lastLabel = "";
+    const camPos = new THREE.Vector3();
+    const camLook = new THREE.Vector3();
+    const tmp = new THREE.Vector3();
+    const tileEl = $("#tile");
+
+    function labelFor(t, valueIndex) {
+      if (t >= 0.93) return "200 OK · HTML sent";
+      if (t >= TUBE_RANGES[0][0] - 0.04) {
+        const value = valueIndex < 0 ? TITLE_INPUT : TITLE_FILTERS[valueIndex].out;
+        return `the_title → "${value}"`;
+      }
+      if (t >= BELL_T - 0.08) return "do_action( 'init' )";
+      return "GET /hello-world/";
+    }
+
+    function frame() {
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const target = scrollTarget();
+      setAct(target.act);
+      shownT = REDUCED_MOTION || DEBUG_T !== null ? target.t : lerp(shownT, target.t, 1 - Math.pow(0.0015, dt));
+      const t = clamp01(shownT);
+
+      /* marble */
+      const { p, tan } = frameAt(t);
+      marble.position.copy(p);
+      const dist = (t - prevT) * path.getLength();
+      if (Math.abs(dist) > 1e-5) {
+        const axis = tmp.crossVectors(UP, tan).normalize();
+        marble.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis, dist / MARBLE_R));
+      }
+      if (prevT < BELL_T && t >= BELL_T) strike(false);
+      if (prevT >= BELL_T && t < BELL_T) modules.forEach((m) => { m.userData.lit = 0; });
+      prevT = t;
+
+      /* bell swing + rings */
+      swingTime += dt;
+      swing.rotation.x = REDUCED_MOTION ? 0 : 0.32 * Math.exp(-2.2 * swingTime) * Math.sin(swingTime * 9);
+      ringTime += dt;
+      rings.forEach((ring, i) => {
+        const local = (ringTime - i * 0.18) / 1.3;
+        const on = local > 0 && local < 1;
+        ring.scale.setScalar(on ? 1 + local * 3.2 : 1);
+        ringMats[i].opacity = on ? (1 - local) * 0.55 : 0;
+      });
+
+      /* cascade through modules in priority order */
+      const since = clock.elapsedTime - cascadeStart;
+      const pastBell = t >= BELL_T;
+      modules.forEach((m, i) => {
+        const turnedOn = pastBell && since > 0.35 + i * 0.16;
+        const tgt = turnedOn ? 1 : 0;
+        m.userData.lit = lerp(m.userData.lit, tgt, 1 - Math.pow(0.001, dt));
+        m.material.emissiveIntensity = m.userData.lit * palette.litGlow;
+        m.position.y = m.userData.baseY + m.userData.lit * 0.08;
+      });
+      const sparkLocal = (since - 0.05) / 0.35;
+      if (sparkLocal > 0 && sparkLocal < 1) {
+        spark.position.copy(cableCurve.getPointAt(sparkLocal));
+        sparkMat.opacity = 1;
+      } else sparkMat.opacity = 0;
+
+      /* filter tubes: the value is derived from t, so scrolling back un-filters it */
+      let valueIndex = -1;
+      tubes.forEach((tb, i) => {
+        const passed = t >= tb.range[1];
+        if (passed) valueIndex = i;
+        const inside = t >= tb.range[0] && t < tb.range[1];
+        tb.flash = lerp(tb.flash, inside ? 1 : 0, 1 - Math.pow(0.002, dt));
+        tb.ringMat.emissiveIntensity = tb.flash * palette.litGlow;
+      });
+      if (valueIndex !== lastValueIndex) {
+        lastValueIndex = valueIndex;
+        if (valueIndex >= 0) hooks.api.applyFilters("hooked.demoTitle", TITLE_FILTERS[valueIndex].out);
+      }
+      const label = labelFor(t, valueIndex);
+      if (label !== lastLabel) {
+        lastLabel = label;
+        hud.label.innerHTML = `<span class="pulse">${escapeHtml(label)}</span>`;
+      }
+
+      /* camera: wide hero shot → follow the marble → pull back at the end */
+      const mobile = isMobile();
+      const cam = CAMERA[layoutMode()];
+      const follow = smooth(0.015, 0.11, t) * (1 - 0.55 * smooth(0.93, 1, t));
+      const heroPos = v(...cam.heroPos), heroLook = v(...cam.heroLook);
+      const followLook = v(p.x + cam.shift, p.y + cam.lookY, p.z - 0.6);
+      const followPos = v(p.x + cam.shift - 1.2, p.y + cam.lift, p.z + cam.dist);
+      camPos.copy(heroPos).lerp(followPos, follow);
+      camLook.copy(heroLook).lerp(followLook, follow);
+      camera.position.copy(camPos);
+      camera.lookAt(camLook);
+      const fogScale = camPos.distanceTo(camLook) / 24;
+      scene.fog.near = palette.fogNear * Math.max(1, fogScale);
+      scene.fog.far = palette.fogFar * Math.max(1, fogScale);
+      camera.updateMatrixWorld();
+
+      /* HUD: never draw labels over the copy */
+      const copyEl = document.querySelector(`main .act[data-act="${currentAct}"] .copy`);
+      const cr = copyEl?.getBoundingClientRect();
+      const overCopy = (x, y) => Boolean(cr) && x > cr.left - 16 && x < cr.right + 16 && y > cr.top - 16 && y < cr.bottom + 16;
+      const lp = toScreen(p.clone().add(v(0, MARBLE_R, 0)));
+      hud.label.style.left = `${lp.x}px`;
+      hud.label.style.top = `${lp.y}px`;
+      hud.label.style.opacity = t > 0.03 && t < 0.995 ? 1 : 0;
+      const bellAct = t > 0.16 && t < 0.56;
+      const tubesAct = t >= 0.56 && t < 0.93;
+      placeCallout(v(bell.p.x, pivotY + 0.12, bell.p.z), hud.calloutBell, hud.lineBell, hud.dotBell, bellAct);
+      placeCallout(tubes[1].anchor, hud.calloutTubes, hud.lineTubes, hud.dotTubes, tubesAct);
+      modules.forEach((m, i) => {
+        const s = toScreen(m.getWorldPosition(tmp).add(v(0, 0.32, 0)));
+        moduleTags[i].style.left = `${s.x}px`;
+        moduleTags[i].style.top = `${s.y}px`;
+        moduleTags[i].classList.toggle("on", bellAct && s.ok && !overCopy(s.x, s.y));
+      });
+      tubes.forEach((tb, i) => {
+        const s = toScreen(path.getPointAt(lerp(tb.range[0], tb.range[1], 0.5)).add(v(0, -0.75, 0)));
+        tubeTags[i].style.left = `${s.x}px`;
+        tubeTags[i].style.top = `${s.y + 24}px`;
+        tubeTags[i].classList.toggle("on", tubesAct && s.ok && !mobile && !overCopy(s.x, s.y + 24));
+      });
+      const railIndex = Math.round(t * (TICKS - 1));
+      ticks.forEach((tick, i) => tick.classList.toggle("on", i === railIndex));
+
+      /* hover */
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObjects(pickables, false)[0]?.object ?? null;
+      if (hit !== hovered) {
+        hovered = hit;
+        document.body.style.cursor = hit?.userData.info?.kind === "bell" ? "pointer" : "";
+        if (hit) {
+          const { title, lines } = hit.userData.info;
+          tooltip.innerHTML = `<div>${escapeHtml(title)}</div>${lines.map((l) => `<div class="dim">${escapeHtml(l)}</div>`).join("")}`;
+        }
+        tooltip.classList.toggle("on", Boolean(hit));
+      }
+
+      /* fade the stage out under the style tile */
+      const tileTop = tileEl.getBoundingClientRect().top;
+      const fade = clamp01((tileTop - innerHeight * 0.25) / (innerHeight * 0.6));
+      $("#stage").style.opacity = fade;
+      hudLayer.style.opacity = fade;
+      $("#rail").style.opacity = fade;
+      $("#legend").style.opacity = fade;
+      $("#scrim").classList.toggle("on", currentAct !== "hero" && fade > 0.2);
+
+      composer.render(dt);
+      if (firstFrameSecs === null) {
+        firstFrameSecs = (performance.now() - t0) / 1000;
+        renderFooter();
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    return {
+      applyPalette,
+      setAO: (on) => { gtao.enabled = on; },
+    };
+  }
+</script>
+</body>
+</html>
