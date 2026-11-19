@@ -1,0 +1,11 @@
+{
+  "version": "7.0",
+  "wp": "7.0.9",
+  "php": "8.3.36",
+  "playground": "3.1.65",
+  "catalog": {
+    "package": "@wp-hooks/wordpress-core",
+    "version": "1.12.0"
+  },
+  "scenarios": ["block-single","block-home","block-page","block-category","block-search","block-404","rest-posts","ajax-nopriv","cron","classic-single","classic-home","classic-page","classic-category","classic-search","classic-404","admin-dashboard"]
+}
