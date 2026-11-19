@@ -31,8 +31,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: pnpm commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
       - run: pnpm lint
-      - name: PHP syntax (data pipeline tracer and fixtures)
-        run: find tools/wp-data tests/php -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: PHP syntax (data pipeline tracer, fixtures and hook conformance runner)
+        run: find tools/wp-data tools/hook-engine tests/php -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Tracer tests (PHP)
         run: pnpm test:php
       - run: pnpm typecheck

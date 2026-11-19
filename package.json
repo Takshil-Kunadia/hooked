@@ -17,7 +17,8 @@
     "knip": "knip",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test:coverage && pnpm build",
     "wp-data": "node tools/wp-data/generate.ts",
-    "test:php": "php tests/php/tracer-test.php"
+    "test:php": "php tests/php/tracer-test.php",
+    "hook-conformance": "node tools/hook-engine/generate.ts"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",
