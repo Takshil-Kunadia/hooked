@@ -1,0 +1,52 @@
+/*
+ * Design tokens: "Hooked" metro line, locked from design round 5.
+ * Source of truth: docs/design-system.md (and src/lib/design/tokens.ts mirrors the
+ * colours the 3D scene needs; a unit test keeps them in sync).
+ *
+ * Porcelain Day / Dusk Core are defined once with light-dark(). The tile follows the
+ * system preference unless the visitor picks one (html[data-tile="day" | "dusk"]).
+ */
+:root {
+  color-scheme: light dark;
+
+  /* surfaces + text */
+  --bg: light-dark(#f5f5f7, #0e1117);
+  --text: light-dark(#1d1d1f, #f5f5f7);
+  --text-2: light-dark(#3a3a3c, #c9ccd3);
+  --muted: light-dark(#6e6e73, #8f949d);
+  --hairline: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.12));
+  --panel: light-dark(rgba(255, 255, 255, 0.8), rgba(18, 22, 30, 0.78));
+  --panel-strong: light-dark(rgba(255, 255, 255, 0.96), rgba(20, 24, 33, 0.96));
+  --accent: light-dark(#3858e9, #8aa4ff);
+  --on-accent: light-dark(#ffffff, #0e1117);
+
+  /* origin colours (who added the code), same in both tiles */
+  --core: #8fa8ff;
+  --plugin: #b79cf2;
+  --theme: #7fd8b9;
+  --mu: #f0cf6a;
+  --dropin: #f29a88;
+
+  /* transit boards: dark in both tiles, for contrast */
+  --board: #121419;
+  --board-text: #f2f3f5;
+  --board-dim: #8a8f98;
+  --led: #ffd36b;
+  --ok: #7fd8a0;
+
+  /* serif accent gradient; Day stops are ≥ 4.1:1 on --bg, Dusk stops ≥ 7.9:1 */
+  --accent-gradient: linear-gradient(
+    92deg,
+    light-dark(#b0623a, #f2c1a4) 0%,
+    light-dark(#7a5ccc, #cdb8ff) 48%,
+    light-dark(#3858e9, #8aa4ff) 100%
+  );
+}
+
+html[data-tile="day"] {
+  color-scheme: light;
+}
+
+html[data-tile="dusk"] {
+  color-scheme: dark;
+}
