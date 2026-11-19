@@ -1,0 +1,737 @@
+{
+  "$comment": "Hook-engine conformance scenarios. tools/hook-engine/conformance-runner.php runs them against real WordPress hook code and records what happens; the TypeScript engine must record exactly the same (tools/hook-engine/conformance.test.ts). The step language is documented in docs/hook-engine.md.",
+  "scenarios": [
+    {
+      "id": "priority-order",
+      "source": "core hooks/addFilter.php test_sort_after_add_filter",
+      "callbacks": {
+        "a": { "body": [["append", "a"]] },
+        "b": { "body": [["append", "b"]] },
+        "c": { "body": [["append", "c"]] }
+      },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 5],
+        ["add", "h", "c", 8],
+        ["dump", "h"],
+        ["apply", "h", ""]
+      ]
+    },
+    {
+      "id": "same-priority-runs-in-insertion-order",
+      "source": "core hooks/addFilter.php test_add_two_filters_with_same_priority",
+      "callbacks": {
+        "a": { "body": [["append", "a"]] },
+        "b": { "body": [["append", "b"]] },
+        "c": { "body": [["append", "c"]] }
+      },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 10],
+        ["add", "h", "c", 10],
+        ["apply", "h", ""]
+      ]
+    },
+    {
+      "id": "readd-same-priority-keeps-position",
+      "source": "core hooks/addFilter.php test_readd_filter",
+      "callbacks": { "a": { "body": [["append", "a"]] }, "b": { "body": [["append", "b"]] } },
+      "steps": [
+        ["add", "h", "a", 10, 1],
+        ["add", "h", "b", 10],
+        ["add", "h", "a", 10, 2],
+        ["dump", "h"],
+        ["apply", "h", "x", "y"]
+      ]
+    },
+    {
+      "id": "readd-different-priority-adds-a-second-entry",
+      "source": "core hooks/addFilter.php test_readd_filter_with_different_priority",
+      "callbacks": { "a": { "body": [["append", "a"]] } },
+      "steps": [
+        ["add", "h", "a", 1],
+        ["add", "h", "a", 2],
+        ["dump", "h"],
+        ["apply", "h", ""]
+      ]
+    },
+    {
+      "id": "extreme-and-null-priorities",
+      "source": "quirk: a null priority is stored as 0",
+      "callbacks": {
+        "a": { "body": [["append", "a"]] },
+        "b": { "body": [["append", "b"]] },
+        "c": { "body": [["append", "c"]] },
+        "d": { "body": [["append", "d"]] },
+        "e": { "body": [["append", "e"]] }
+      },
+      "steps": [
+        ["add", "h", "a", "PHP_INT_MAX"],
+        ["add", "h", "b", "PHP_INT_MIN"],
+        ["add", "h", "c", 0],
+        ["add", "h", "d", -5],
+        ["add", "h", "e", null],
+        ["dump", "h"],
+        ["apply", "h", ""],
+        ["has", "h", "a"],
+        ["remove", "h", "e", null],
+        ["dump", "h"]
+      ]
+    },
+    {
+      "id": "accepted-args",
+      "source": "core hooks/doAction.php test_do_action_with_more_accepted_args and friends",
+      "callbacks": { "a1": {}, "a2": {}, "a3": {}, "a5": {}, "minus1": {}, "a0": {} },
+      "steps": [
+        ["add", "h", "a1", 1, 1],
+        ["add", "h", "a2", 2, 2],
+        ["add", "h", "a3", 3, 3],
+        ["add", "h", "a5", 4, 5],
+        ["add", "h", "minus1", 5, -1],
+        ["add", "h", "a0", 6, 0],
+        ["apply", "h", "v", "x", "y"]
+      ]
+    },
+    {
+      "id": "do-action-without-args-passes-an-empty-string",
+      "source": "quirk: do_action() pads missing args with '', do_action_ref_array() does not",
+      "callbacks": { "a": {} },
+      "steps": [
+        ["add", "h", "a", 10, 1],
+        ["do", "h"],
+        ["do-ref", "h", []]
+      ]
+    },
+    {
+      "id": "do-action-unwraps-a-single-object-in-an-array",
+      "source": "core actions.php test_action_args_with_php4_syntax",
+      "callbacks": { "a": {} },
+      "steps": [
+        ["add", "h", "a", 10, 1],
+        ["do", "h", [{ "object": "o" }]],
+        ["do", "h", [{ "object": "o" }, { "object": "p" }]],
+        ["do", "h", ["s"]],
+        ["do-ref", "h", [[{ "object": "o" }]]]
+      ]
+    },
+    {
+      "id": "actions-ignore-return-values",
+      "source": "core hooks/doAction.php test_do_action_doesnt_change_value",
+      "callbacks": { "a": { "body": [["set", "changed"]] }, "b": {} },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 11],
+        ["do", "h", "orig"]
+      ]
+    },
+    {
+      "id": "filter-that-forgets-to-return",
+      "source": "lab: a filter that returns nothing hands null to the next callback",
+      "callbacks": {
+        "a": { "body": [["append", "!"]] },
+        "b": { "body": [["set", null]] },
+        "c": { "body": [["append", "?"]] }
+      },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 11],
+        ["add", "h", "c", 12],
+        ["apply", "h", "hi"]
+      ]
+    },
+    {
+      "id": "filter-without-callbacks-returns-the-value",
+      "source": "core filters.php test_simple_filter",
+      "callbacks": {},
+      "steps": [
+        ["apply", "h", 5],
+        ["apply-ref", "h", ["v", "w"]],
+        ["dump", "h"]
+      ]
+    },
+    {
+      "id": "remove-and-add",
+      "source": "core hooks/addFilter.php test_remove_and_add",
+      "callbacks": {
+        "empty": { "body": [["set", ""]] },
+        "r2": {
+          "body": [
+            ["remove", "h", "r2", 11],
+            ["add", "h", "r2", 11, 1],
+            ["append", "2"]
+          ]
+        },
+        "f4": { "body": [["append", "4"]] }
+      },
+      "steps": [
+        ["add", "h", "empty", 10, 0],
+        ["add", "h", "r2", 11, 1],
+        ["add", "h", "f4", 12, 1],
+        ["apply", "h", ""],
+        ["dump", "h"]
+      ]
+    },
+    {
+      "id": "remove-and-add-last",
+      "source": "core hooks/addFilter.php test_remove_and_add_last_filter",
+      "callbacks": {
+        "empty": { "body": [["set", ""]] },
+        "f1": { "body": [["append", "1"]] },
+        "r2": {
+          "body": [
+            ["remove", "h", "r2", 12],
+            ["add", "h", "r2", 12, 1],
+            ["append", "2"]
+          ]
+        }
+      },
+      "steps": [
+        ["add", "h", "empty", 10, 0],
+        ["add", "h", "f1", 11, 1],
+        ["add", "h", "r2", 12, 1],
+        ["apply", "h", ""],
+        ["dump", "h"]
+      ]
+    },
+    {
+      "id": "remove-recurse-and-add",
+      "source": "core hooks/addFilter.php test_remove_and_recurse_and_add",
+      "callbacks": {
+        "empty": { "body": [["set", ""]] },
+        "f1": { "body": [["append", "1"]] },
+        "rr2": {
+          "body": [
+            ["remove", "h", "rr2", 11],
+            ["append", "-"],
+            ["append-apply", "h", ""],
+            ["append", "-"],
+            ["add", "h", "rr2", 11, 1],
+            ["append", "2"]
+          ]
+        },
+        "f3": { "body": [["append", "3"]] },
+        "f4": { "body": [["append", "4"]] }
+      },
+      "steps": [
+        ["add", "h", "empty", 10, 0],
+        ["add", "h", "f1", 11, 1],
+        ["add", "h", "rr2", 11, 1],
+        ["add", "h", "f3", 11, 1],
+        ["add", "h", "f4", 12, 1],
+        ["apply", "h", ""],
+        ["dump", "h"]
+      ]
+    },
+    {
+      "id": "remove-and-add-action",
+      "source": "core hooks/addFilter.php test_remove_and_add_action and test_remove_and_add_last_action",
+      "callbacks": {
+        "e": {},
+        "r2": {
+          "body": [
+            ["remove", "h", "r2", 11],
+            ["add", "h", "r2", 11, 0]
+          ]
+        },
+        "f4": {},
+        "last": {
+          "body": [
+            ["remove", "g", "last", 12],
+            ["add", "g", "last", 12, 0]
+          ]
+        }
+      },
+      "steps": [
+        ["add", "h", "e", 10, 0],
+        ["add", "h", "r2", 11, 0],
+        ["add", "h", "f4", 12, 0],
+        ["do", "h"],
+        ["add", "g", "e", 10, 0],
+        ["add", "g", "f4", 11, 0],
+        ["add", "g", "last", 12, 0],
+        ["do", "g"]
+      ]
+    },
+    {
+      "id": "remove-recurse-and-add-action",
+      "source": "core hooks/addFilter.php test_remove_and_recurse_and_add_action",
+      "callbacks": {
+        "e": {},
+        "f1": {},
+        "rr2": {
+          "body": [
+            ["remove", "h", "rr2", 11],
+            ["do", "h"],
+            ["add", "h", "rr2", 11, 0]
+          ]
+        },
+        "f3": {},
+        "f4": {}
+      },
+      "steps": [
+        ["add", "h", "e", 10, 0],
+        ["add", "h", "f1", 11, 0],
+        ["add", "h", "rr2", 11, 0],
+        ["add", "h", "f3", 11, 0],
+        ["add", "h", "f4", 12, 0],
+        ["do", "h"]
+      ]
+    },
+    {
+      "id": "callback-manipulation-while-running",
+      "source": "core actions.php test_action_callback_manipulation_while_running",
+      "callbacks": {
+        "a": {},
+        "m": {
+          "body": [
+            ["remove", "h", "b", 12],
+            ["add", "h", "c", 12, 2],
+            ["add", "h", "d", 13, 2],
+            ["add", "h", "e", 10, 2]
+          ]
+        },
+        "b": {},
+        "c": {},
+        "d": {},
+        "e": {}
+      },
+      "steps": [
+        ["add", "h", "a", 11, 2],
+        ["add", "h", "m", 12, 2],
+        ["add", "h", "b", 12, 2],
+        ["do", "h", "h", "mocks"],
+        ["do", "h", "h", "mocks"]
+      ]
+    },
+    {
+      "id": "recursion",
+      "source": "core actions.php test_action_recursion",
+      "callbacks": { "a": {}, "r": { "body": [["once", ["do", "h", "h"]]] }, "b": {} },
+      "steps": [
+        ["add", "h", "a", 11, 1],
+        ["add", "h", "b", 13, 1],
+        ["add", "h", "r", 12, 1],
+        ["do", "h", "h"]
+      ]
+    },
+    {
+      "id": "self-removal-skips-the-next-priority",
+      "source": "quirk: the only callback at a priority removes itself while a lower priority exists",
+      "callbacks": { "p5": {}, "p10": { "body": [["remove", "h", "p10", 10]] }, "p20": {}, "p30": {} },
+      "steps": [
+        ["add", "h", "p5", 5],
+        ["add", "h", "p10", 10],
+        ["add", "h", "p20", 20],
+        ["add", "h", "p30", 30],
+        ["do", "h"],
+        ["do", "h"]
+      ]
+    },
+    {
+      "id": "self-removal-at-the-lowest-priority",
+      "source": "core actions.php test_action_self_removal",
+      "callbacks": { "p10": { "body": [["remove", "h", "p10", 10]] }, "p20": {}, "p30": {} },
+      "steps": [
+        ["add", "h", "p10", 10],
+        ["add", "h", "p20", 20],
+        ["add", "h", "p30", 30],
+        ["do", "h"],
+        ["did", "h"],
+        ["do", "h"]
+      ]
+    },
+    {
+      "id": "self-removal-with-a-neighbour-at-the-same-priority",
+      "source": "quirk: the priority still has callbacks, so nothing is re-sorted",
+      "callbacks": { "p5": {}, "a": { "body": [["remove", "h", "a", 10]] }, "b": {}, "p20": {} },
+      "steps": [
+        ["add", "h", "p5", 5],
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 10],
+        ["add", "h", "p20", 20],
+        ["do", "h"],
+        ["do", "h"]
+      ]
+    },
+    {
+      "id": "self-readd-as-the-only-callback-at-a-priority",
+      "source": "quirk: exercises the step-back branch of WP_Hook::resort_active_iterations()",
+      "callbacks": {
+        "p5": {},
+        "p10": {
+          "body": [
+            ["remove", "h", "p10", 10],
+            ["add", "h", "p10", 10, 1]
+          ]
+        },
+        "p20": {},
+        "low": {
+          "body": [
+            ["remove", "g", "low", 10],
+            ["add", "g", "low", 10, 1]
+          ]
+        },
+        "last": {
+          "body": [
+            ["remove", "k", "last", 30],
+            ["add", "k", "last", 30, 1]
+          ]
+        }
+      },
+      "steps": [
+        ["add", "h", "p5", 5],
+        ["add", "h", "p10", 10],
+        ["add", "h", "p20", 20],
+        ["do", "h"],
+        ["add", "g", "low", 10],
+        ["add", "g", "p20", 20],
+        ["do", "g"],
+        ["add", "k", "p5", 5],
+        ["add", "k", "last", 30],
+        ["do", "k"],
+        ["dump", "k"]
+      ]
+    },
+    {
+      "id": "self-readd-after-adding-a-priority-in-between",
+      "source": "quirk: the step-back in WP_Hook::resort_active_iterations() lands past the new priority",
+      "callbacks": {
+        "p5": {},
+        "x": {
+          "body": [
+            ["once", ["remove", "h", "x", 10]],
+            ["once", ["add", "h", "mid", 15]],
+            ["once", ["add", "h", "x", 10]]
+          ]
+        },
+        "mid": {},
+        "p20": {}
+      },
+      "steps": [
+        ["add", "h", "p5", 5],
+        ["add", "h", "x", 10],
+        ["add", "h", "p20", 20],
+        ["do", "h"],
+        ["do", "h"]
+      ]
+    },
+    {
+      "id": "adding-callbacks-while-running",
+      "source": "core actions.php test_action_callback_manipulation_while_running (lower, same and higher priorities)",
+      "callbacks": {
+        "a": {
+          "body": [
+            ["once", ["add", "h", "lo", 5]],
+            ["once", ["add", "h", "same", 10]],
+            ["once", ["add", "h", "hi", 15]]
+          ]
+        },
+        "lo": {},
+        "same": {},
+        "hi": {}
+      },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["do", "h"],
+        ["dump", "h"],
+        ["do", "h"]
+      ]
+    },
+    {
+      "id": "removing-later-callbacks-while-running",
+      "source": "core actions.php test_action_callback_manipulation_while_running (removals)",
+      "callbacks": {
+        "a": {
+          "body": [
+            ["remove", "h", "b", 10],
+            ["remove", "h", "c", 20]
+          ]
+        },
+        "b": {},
+        "c": {},
+        "d": {}
+      },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 10],
+        ["add", "h", "c", 20],
+        ["add", "h", "d", 30],
+        ["do", "h"],
+        ["do", "h"]
+      ]
+    },
+    {
+      "id": "remove-all-while-running",
+      "source": "core actions.php test_remove_all_action, removed from inside a running hook",
+      "callbacks": {
+        "a": { "body": [["remove-all", "h"]] },
+        "b": {},
+        "c": {},
+        "x": { "body": [["remove-all", "g", 20]] },
+        "y": {},
+        "z": {}
+      },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 10],
+        ["add", "h", "c", 20],
+        ["do", "h"],
+        ["dump", "h"],
+        ["do", "h"],
+        ["add", "g", "x", 10],
+        ["add", "g", "y", 20],
+        ["add", "g", "z", 30],
+        ["do", "g"],
+        ["dump", "g"]
+      ]
+    },
+    {
+      "id": "remove-all-filters-respects-priority",
+      "source": "core filters.php test_remove_all_filters_should_respect_the_priority_argument",
+      "callbacks": { "a": {}, "b": {} },
+      "steps": [
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 20],
+        ["remove-all", "h", 20],
+        ["dump", "h"],
+        ["remove-all", "h", 99],
+        ["dump", "h"],
+        ["remove-all", "h"],
+        ["dump", "h"],
+        ["has", "h", null]
+      ]
+    },
+    {
+      "id": "nested-filters-and-the-current-filter-stack",
+      "source": "core actions.php test_doing_filter_real",
+      "callbacks": {
+        "t": {
+          "body": [
+            ["state"],
+            ["doing", "testing"],
+            ["doing", "nested"],
+            ["add", "nested", "n", 10],
+            ["apply", "nested", ""],
+            ["doing", "nested"],
+            ["state"]
+          ]
+        },
+        "n": { "body": [["state"], ["doing", "testing"], ["doing", "nested"], ["doing", "something_else"]] }
+      },
+      "steps": [
+        ["state"],
+        ["doing", "testing"],
+        ["add", "testing", "t", 10],
+        ["has", "testing", "t"],
+        ["apply", "testing", ""],
+        ["state"]
+      ]
+    },
+    {
+      "id": "current-priority",
+      "source": "core filters.php test_current_priority and test_other_priority, plus recursion",
+      "callbacks": {
+        "cp": {
+          "body": [
+            ["priority", "h"],
+            ["priority", "other"]
+          ]
+        },
+        "o": {},
+        "r": {
+          "body": [
+            ["priority", "g"],
+            ["once", ["do", "g"]]
+          ]
+        },
+        "probe": { "body": [["priority", "g"]] }
+      },
+      "steps": [
+        ["add", "other", "o", 10],
+        ["add", "h", "cp", 99],
+        ["do", "h"],
+        ["priority", "h"],
+        ["do", "h"],
+        ["add", "g", "r", 5],
+        ["add", "g", "probe", 10],
+        ["do", "g"],
+        ["priority", "g"]
+      ]
+    },
+    {
+      "id": "did-action-and-did-filter-count-every-call",
+      "source": "core actions.php test_did_action and filters.php test_did_filter",
+      "callbacks": { "a": {} },
+      "steps": [
+        ["did", "h"],
+        ["do", "h"],
+        ["apply", "h", "x"],
+        ["did", "h"],
+        ["add", "h", "a"],
+        ["do", "h"],
+        ["apply", "h", "y"],
+        ["did", "h"]
+      ]
+    },
+    {
+      "id": "the-all-hook",
+      "source": "core actions.php test_all_action, filters.php test_all_filter, hooks/doAllHook.php",
+      "callbacks": { "spy": { "body": [["state"]] }, "a": {} },
+      "steps": [
+        ["add", "all", "spy", 10, 1],
+        ["do", "h", "a", "b"],
+        ["apply", "g", "v", "w"],
+        ["did", "h"],
+        ["add", "h", "a"],
+        ["do", "h"],
+        ["apply-ref", "g", ["v", "w"]],
+        ["do-ref", "h", ["x"]],
+        ["state"]
+      ]
+    },
+    {
+      "id": "all-hook-callback-removes-itself",
+      "source": "quirk: plugin.php re-checks the all hook after running it, so the hook name is pushed twice",
+      "callbacks": { "once": { "body": [["remove", "all", "once", 10]] }, "a": { "body": [["state"]] } },
+      "steps": [
+        ["add", "all", "once", 10],
+        ["add", "h", "a", 10],
+        ["do", "h"],
+        ["state"],
+        ["add", "all", "once", 10],
+        ["do", "g"],
+        ["state"]
+      ]
+    },
+    {
+      "id": "has-filter",
+      "source": "core hooks/hasFilter.php and hooks/hasFilters.php",
+      "callbacks": { "a": {}, "b": {}, "z": {} },
+      "steps": [
+        ["has", "h", null],
+        ["add", "h", "a", 10],
+        ["has", "h", null],
+        ["has", "h", "a"],
+        ["has", "h", "b"],
+        ["add", "h", "z", 0],
+        ["has", "h", "z"],
+        ["has", "h", "a", 10],
+        ["has", "h", "a", 11],
+        ["remove", "h", "a", 10],
+        ["remove", "h", "z", 0],
+        ["has", "h", null],
+        ["has", "h", "a"]
+      ]
+    },
+    {
+      "id": "remove-filter-needs-the-same-priority",
+      "source": "core hooks/removeFilter.php and actions.php test_remove_action",
+      "callbacks": { "a": {}, "b": {} },
+      "steps": [
+        ["remove", "h", "a", 10],
+        ["add", "h", "a", 10],
+        ["add", "h", "b", 10],
+        ["remove", "h", "a", 11],
+        ["remove", "h", "a"],
+        ["dump", "h"],
+        ["remove", "h", "a", 10],
+        ["remove", "h", "b", 10],
+        ["dump", "h"]
+      ]
+    },
+    {
+      "id": "closures-are-removed-by-instance",
+      "source": "core actions.php test_remove_anonymous_callback and test_action_closure",
+      "callbacks": {
+        "c1": { "kind": "closure", "body": [["append", "1"]] },
+        "c2": { "kind": "closure", "body": [["append", "1"]] }
+      },
+      "steps": [
+        ["add", "h", "c1", 10],
+        ["remove", "h", "c2", 10],
+        ["apply", "h", "x"],
+        ["has", "h", "c1"],
+        ["has", "h", "c2"],
+        ["remove", "h", "c1", 10],
+        ["apply", "h", "x"]
+      ]
+    },
+    {
+      "id": "method-and-static-callbacks",
+      "source": "core hooks/addFilter.php test_add_filter_with_object and test_add_filter_with_static_method",
+      "callbacks": {
+        "m1": { "kind": "method", "object": "A", "method": "run", "body": [["append", "1"]] },
+        "m2": { "kind": "method", "object": "B", "method": "run", "body": [["append", "2"]] },
+        "s": { "kind": "static", "body": [["append", "s"]] },
+        "t": { "kind": "static", "form": "string", "body": [["append", "t"]] }
+      },
+      "steps": [
+        ["add", "h", "m1", 10],
+        ["add", "h", "m2", 10],
+        ["add", "h", "s", 10],
+        ["add", "h", "t", 10],
+        ["apply", "h", ""],
+        ["add", "h", "m1", 10, 3],
+        ["dump", "h"],
+        ["has", "h", ["s", "string"]],
+        ["remove", "h", ["t", "array"], 10],
+        ["remove", "h", ["s", "string"], 10],
+        ["dump", "h"]
+      ]
+    },
+    {
+      "id": "apply-filters-ref-array",
+      "source": "core filters.php test_filter_ref_array and test_filter_ref_array_result",
+      "callbacks": { "a": { "body": [["set-arg", 1]] }, "b": { "body": [["append", "!"]] } },
+      "steps": [
+        ["add", "h", "a", 10, 2],
+        ["add", "h", "b", 11, 2],
+        ["apply-ref", "h", ["v", "w"]],
+        ["did", "h"]
+      ]
+    },
+    {
+      "id": "action-nested-in-a-filter-on-the-same-hook",
+      "source": "quirk: the nested do_action() leaves WP_Hook's doing_action flag on for the rest of the outer filter",
+      "callbacks": {
+        "c1": {
+          "body": [
+            ["once", ["do", "h"]],
+            ["append", "1"]
+          ]
+        },
+        "c2": { "body": [["append", "2"]] },
+        "c3": { "body": [["append", "3"]] }
+      },
+      "steps": [
+        ["add", "h", "c1", 10],
+        ["add", "h", "c2", 20],
+        ["add", "h", "c3", 30],
+        ["apply", "h", "v"],
+        ["remove", "h", "c1", 10],
+        ["apply", "h", "w"],
+        ["do", "h"],
+        ["apply", "h", "q"]
+      ]
+    },
+    {
+      "id": "filter-nested-in-an-action-on-the-same-hook",
+      "source": "quirk: a filter applied inside an action on the same hook runs with doing_action already on",
+      "callbacks": {
+        "c1": {
+          "body": [
+            ["once", ["append-apply", "h", "v"]],
+            ["append", "1"]
+          ]
+        },
+        "c2": { "body": [["append", "2"]] }
+      },
+      "steps": [
+        ["add", "h", "c1", 10],
+        ["add", "h", "c2", 20],
+        ["do", "h", "x"],
+        ["apply", "h", "y"]
+      ]
+    }
+  ]
+}
