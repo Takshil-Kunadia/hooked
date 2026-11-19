@@ -6,7 +6,7 @@
 
 WordPress internals (the request lifecycle, hooks and filters) are hard to learn. The official developer docs have the information, but they are flat reference pages. The user was inspired by Apple product pages, igloo.inc, estheet, maxveilleux, Netlify's 5M-devs site and codeofsagar. They want an educational site that explains WordPress core with scroll-driven 3D storytelling, click-to-expand detail, hover reveals, gamification and developer easter eggs. It must also load fast and score near-perfect on SEO and Core Web Vitals.
 
-The audience is beginners and working developers. The user has no design experience and wants help with planning, design and implementation. The project folder `/Users/takshilkunadia/Documents/Development/labs/test-3d` is empty and is not a git repo. Node is v20.10.0. Blender is not installed.
+The audience is beginners and working developers. The user has no design experience and wants help with planning, design and implementation. At the start, the project folder was empty and not yet a git repository, Node was v20.10.0 and Blender was not installed.
 
 ## Decisions made with the user
 
@@ -356,7 +356,7 @@ tests/e2e/
 
 ## Project location
 
-All work lives in **`/Users/takshilkunadia/Documents/Development/labs/test-3d/hooked/`**. "hooked" is a working name, easy to rename later. Throwaway design work goes in `hooked/explorations/`, which is excluded from the production build.
+All work lives in this repository. "hooked" is a working name, easy to rename later. Throwaway design work goes in `hooked/explorations/`, which is excluded from the production build.
 
 ## Performance, SEO and Core Web Vitals budgets (enforced in CI)
 
