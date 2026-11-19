@@ -1,0 +1,21 @@
+# Git hooks: fast checks on commit, the full test suite on push.
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.{ts,tsx,mjs}"
+      run: pnpm eslint {staged_files}
+    format:
+      glob: "*.{ts,tsx,mjs,json,css,md,yml}"
+      run: pnpm prettier --check {staged_files}
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: pnpm typecheck
+pre-push:
+  commands:
+    test:
+      run: pnpm test
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm commitlint --edit {1}
