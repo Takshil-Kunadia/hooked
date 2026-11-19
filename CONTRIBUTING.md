@@ -19,5 +19,5 @@ Thanks for helping people understand WordPress. A few rules keep the site accura
 ## Adding things
 
 - **A story step:** add it to the chapter's stage data with its beat, resting pose and copy, then check the copy against core source.
-- **A WordPress version:** the version-data pipeline (`tools/wp-data`, coming in phase 3) generates hook data. Story text should only need edits where the integrity tests flag drift.
+- **A WordPress version:** run `pnpm wp-data <x.y>`, then `pnpm test`. Story text only needs edits where the integrity tests flag drift. See [`docs/data-pipeline.md`](docs/data-pipeline.md).
 - **A 3D set piece:** build it from existing props in the vocabulary, and keep geometry helpers pure and tested in `src/lib/geometry/`.
