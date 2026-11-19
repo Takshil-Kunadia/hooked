@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hooked: Story Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@600&display=swap" rel="stylesheet" />
+<style>
+  @font-face { font-family: "Departure Mono"; src: url("https://cdn.jsdelivr.net/gh/rektdeckard/departure-mono@main/public/assets/DepartureMono-Regular.woff2") format("woff2"); font-display: swap; }
+  :root {
+    --bg: #f5f5f7; --paper: #ffffff; --text: #1d1d1f; --muted: #5f6066; --hair: rgba(0,0,0,.1);
+    --accent: #3858e9; --core: #8fa8ff; --plugin: #b79cf2; --theme: #7fd8b9; --mu: #f0cf6a; --dropin: #f29a88;
+    --ink: #2b2d33; --rail: #d9dce3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); }
+  body { font-family: "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; padding: 0 16px 120px; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  header { padding: 72px 0 36px; }
+  .eyebrow { font-family: "Departure Mono", monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+  h1 { font-size: clamp(38px, 5.6vw, 76px); line-height: 1; letter-spacing: -.035em; font-weight: 700; max-width: 16ch; }
+  h1 em { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; background: linear-gradient(92deg,#e3a17f,#b59cea 48%,#3858e9); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: .06em; }
+  .lede { font-size: clamp(18px, 1.5vw, 22px); line-height: 1.45; color: var(--muted); max-width: 62ch; margin-top: 20px; font-weight: 500; }
+  .lede b { color: var(--text); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .concept { background: var(--paper); border: 1px solid var(--hair); border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; }
+  .concept.rec { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .concept svg { display: block; width: 100%; height: auto; background: #fafafb; border-bottom: 1px solid var(--hair); }
+  .concept .body { padding: 22px 24px 24px; display: grid; gap: 12px; }
+  .concept h2 { font-size: 26px; letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tag { font-family: "Departure Mono", monospace; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--hair); color: var(--muted); font-weight: 400; }
+  .tag.rec { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pitch { font-size: 17px; line-height: 1.45; color: var(--muted); font-weight: 500; }
+  .pitch b { color: var(--text); font-weight: 600; }
+  .pc { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14.5px; line-height: 1.45; }
+  .pc div { padding: 12px 14px; border-radius: 14px; background: var(--bg); }
+  .pc b { display: block; font-family: "Departure Mono", monospace; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; color: var(--muted); font-weight: 400; }
+  @media (max-width: 520px) { .pc { grid-template-columns: 1fr; } }
+
+  h3 { font-family: "Departure Mono", monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 400; margin: 72px 0 18px; }
+  .tablewrap { overflow-x: auto; border-radius: 20px; border: 1px solid var(--hair); background: var(--paper); }
+  table { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 14.5px; line-height: 1.4; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  th { font-family: "Departure Mono", monospace; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 400; background: #fafafb; }
+  td:first-child { font-family: "JetBrains Mono", monospace; font-size: 13px; white-space: nowrap; }
+  td.rec, th.rec { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  tr:last-child td { border-bottom: 0; }
+
+  .story { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .stop { background: var(--paper); border: 1px solid var(--hair); border-radius: 18px; padding: 16px 16px 18px; }
+  .stop .n { font-family: "Departure Mono", monospace; font-size: 11px; color: var(--accent); letter-spacing: .06em; }
+  .stop .t { font-weight: 650; font-size: 17px; margin: 6px 0 4px; letter-spacing: -.01em; }
+  .stop .d { color: var(--muted); font-size: 14.5px; line-height: 1.45; font-weight: 500; }
+  .stop code { font-family: "JetBrains Mono", monospace; font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 6px; color: var(--text); }
+  .note { font-family: "Caveat", cursive; font-size: 24px; color: var(--accent); margin-top: 18px; transform: rotate(-1deg); }
+
+  /* ---------- svg vocabulary ---------- */
+  .s-paper { fill: #fafafb; }
+  .mono { font-family: "JetBrains Mono", monospace; }
+  .hud { font-family: "Departure Mono", monospace; letter-spacing: .04em; }
+  .sans { font-family: "Inter", sans-serif; }
+  .xs { font-size: 10px; } .sm { font-size: 12px; } .md { font-size: 14px; } .lg { font-size: 17px; font-weight: 700; }
+  .t-ink { fill: var(--text); } .t-muted { fill: var(--muted); } .t-white { fill: #fff; } .t-accent { fill: var(--accent); }
+  .end { text-anchor: end; } .mid { text-anchor: middle; }
+  .f-core { fill: var(--core); } .f-plugin { fill: var(--plugin); } .f-theme { fill: var(--theme); } .f-mu { fill: var(--mu); }
+  .f-white { fill: #fff; } .f-ink { fill: var(--ink); } .f-accent { fill: var(--accent); } .f-soft { fill: color-mix(in srgb, var(--accent) 12%, #fff); }
+  .s-card { fill: #fff; stroke: rgba(0,0,0,.12); stroke-width: 1; }
+  .s-hair { stroke: rgba(0,0,0,.1); stroke-width: 1; fill: none; }
+  .s-wire { stroke: #b9bdc7; stroke-width: 2; fill: none; stroke-dasharray: 3 4; }
+  .s-arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+  .flow { stroke-dasharray: 2 14; stroke-linecap: round; animation: flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -32; } }
+  @media (prefers-reduced-motion: reduce) { .flow { animation: none; } svg animate, svg animateMotion, svg animateTransform { display: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5f6066" /></marker>
+    <radialGradient id="pearl" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" /><stop offset=".55" stop-color="#e9ecff" /><stop offset=".8" stop-color="#f6e7ff" /><stop offset="1" stop-color="#c9cfe6" /></radialGradient>
+    <symbol id="bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.6 2.2H4.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><path d="M10 20.4a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></symbol>
+    <symbol id="speaker" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" /><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></symbol>
+    <symbol id="person" viewBox="0 0 20 34"><circle cx="10" cy="7" r="6" /><rect x="2" y="15" width="16" height="19" rx="7" /></symbol>
+    <symbol id="db" viewBox="0 0 40 44"><ellipse cx="20" cy="7" rx="17" ry="6" fill="#fff" stroke="#9aa0ad" stroke-width="1.6" /><path d="M3 7v28c0 3.3 7.6 6 17 6s17-2.7 17-6V7" fill="#fff" stroke="#9aa0ad" stroke-width="1.6" /><path d="M3 21c0 3.3 7.6 6 17 6s17-2.7 17-6" fill="none" stroke="#9aa0ad" stroke-width="1.6" /></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Hooked · story concepts · pick a world</p>
+    <h1>One moment, four <em>worlds.</em></h1>
+    <p class="lede">Every frame below shows the <b>same two ideas</b>. First the <b>init action</b>: WordPress announces "init is happening" and every listener runs in priority order. Then the <b>the_title filter</b>: a value passes through each callback and comes out changed. Whichever world we pick gets used for <b>every chapter</b>, so the story stays consistent.</p>
+  </header>
+
+  <div class="grid">
+    <!-- ============ A · METRO LINE ============ -->
+    <article class="concept rec">
+      <svg viewBox="0 0 640 400" role="img" aria-label="Metro line concept: a train stops at stations named after hooks">
+        <!-- feeder lines joining at wp-settings: plugins + theme board here -->
+        <path d="M240 210 L270 168 V128" stroke="var(--plugin)" stroke-width="8" fill="none" stroke-linecap="round" />
+        <path d="M300 210 L286 168 V128" stroke="var(--theme)" stroke-width="8" fill="none" stroke-linecap="round" />
+        <text x="232" y="224" class="hud xs t-muted">PLUGINS</text><text x="292" y="224" class="hud xs t-muted">THEME</text>
+        <!-- main line -->
+        <path id="metro" d="M30 84 H196 L240 128 H420 L464 84 H612" stroke="var(--accent)" stroke-width="12" fill="none" stroke-linejoin="round" stroke-linecap="round" />
+        <!-- template junction branches -->
+        <path d="M464 84 L500 50 H560" stroke="#c8cdd8" stroke-width="7" fill="none" stroke-linecap="round" />
+        <text x="566" y="54" class="mono xs t-muted">single.php ✓</text>
+        <!-- stations -->
+        <g class="mono xs t-ink">
+          <circle cx="40" cy="84" r="9" class="f-white" stroke="var(--ink)" stroke-width="3" /><text x="40" y="66" class="mid">browser</text>
+          <circle cx="104" cy="84" r="7" class="f-white" stroke="var(--ink)" stroke-width="3" /><text x="104" y="66" class="mid">index.php</text>
+          <circle cx="168" cy="84" r="7" class="f-white" stroke="var(--ink)" stroke-width="3" /><text x="168" y="66" class="mid">wp-config</text>
+          <circle cx="278" cy="128" r="10" class="f-white" stroke="var(--ink)" stroke-width="3" /><text x="278" y="154" class="mid">wp-settings</text>
+          <circle cx="346" cy="128" r="14" class="f-white" stroke="var(--accent)" stroke-width="4" /><text x="346" y="110" class="mid lg sans t-accent" style="font-size:13px">init</text>
+          <circle cx="406" cy="128" r="7" class="f-white" stroke="var(--ink)" stroke-width="3" /><text x="406" y="154" class="mid">WP_Query</text>
+          <circle cx="464" cy="84" r="7" class="f-white" stroke="var(--ink)" stroke-width="3" /><text x="464" y="112" class="mid">template</text>
+          <circle cx="604" cy="84" r="9" class="f-white" stroke="var(--ink)" stroke-width="3" /><text x="604" y="112" class="mid">200 OK</text>
+        </g>
+        <use href="#db" x="392" y="160" width="28" height="30" /><text x="430" y="182" class="hud xs t-muted">DEPOT = DATABASE</text>
+        <!-- the train (the request) -->
+        <g>
+          <rect x="-24" y="-11" width="48" height="22" rx="11" fill="var(--ink)" />
+          <rect x="-16" y="-5" width="9" height="8" rx="2" fill="#cfe0ff" /><rect x="-4" y="-5" width="9" height="8" rx="2" fill="#cfe0ff" /><rect x="8" y="-5" width="9" height="8" rx="2" fill="#cfe0ff" />
+          <animateMotion dur="9s" repeatCount="indefinite" keyPoints="0;0.47;0.47;1;1" keyTimes="0;0.4;0.6;0.92;1" calcMode="linear"><mpath href="#metro" /></animateMotion>
+        </g>
+        <!-- inset: init platform -->
+        <g transform="translate(22 236)">
+          <rect width="300" height="146" rx="16" class="s-card" />
+          <use href="#speaker" x="14" y="12" width="18" height="18" style="color:var(--accent)" />
+          <text x="38" y="26" class="sans sm t-ink" style="font-weight:600">“Now arriving: init”</text>
+          <text x="14" y="46" class="hud xs t-muted">PLATFORM · LISTENERS WAIT WITH TICKETS</text>
+          <rect x="12" y="122" width="276" height="10" rx="5" fill="#e6e8ee" />
+          <g>
+            <use href="#person" x="22" y="78" width="20" height="40" class="f-core" /><use href="#person" x="64" y="78" width="20" height="40" class="f-core" /><use href="#person" x="106" y="78" width="20" height="40" class="f-core" />
+            <use href="#person" x="148" y="78" width="20" height="40" class="f-core" /><use href="#person" x="190" y="78" width="20" height="40" class="f-plugin" /><use href="#person" x="232" y="78" width="20" height="40" fill="#d6d8de" />
+          </g>
+          <g class="hud xs">
+            <rect x="20" y="58" width="24" height="16" rx="4" class="f-ink" /><text x="32" y="70" class="mid t-white">0</text>
+            <rect x="62" y="58" width="24" height="16" rx="4" class="f-ink" /><text x="74" y="70" class="mid t-white">1</text>
+            <rect x="104" y="58" width="24" height="16" rx="4" class="f-ink" /><text x="116" y="70" class="mid t-white">5</text>
+            <rect x="146" y="58" width="24" height="16" rx="4" class="f-ink" /><text x="158" y="70" class="mid t-white">10</text>
+            <rect x="188" y="58" width="24" height="16" rx="4" class="f-ink" /><text x="200" y="70" class="mid t-white">10</text>
+            <rect x="230" y="58" width="24" height="16" rx="4" class="f-ink" /><text x="242" y="70" class="mid t-white">20</text>
+          </g>
+          <text x="268" y="98" class="hud xs t-muted">→</text>
+          <text x="14" y="143" class="hud xs t-muted" opacity="0">.</text>
+        </g>
+        <!-- inset: the_title workshop -->
+        <g transform="translate(336 236)">
+          <rect width="282" height="146" rx="16" class="s-card" />
+          <text x="14" y="26" class="sans sm t-ink" style="font-weight:600">Workshop · the_title</text>
+          <text x="14" y="46" class="hud xs t-muted">EACH STATION CHANGES THE CARGO</text>
+          <g class="mono xs">
+            <rect x="12" y="60" width="82" height="26" rx="8" class="f-core" /><text x="53" y="77" class="mid t-ink">wptexturize</text>
+            <rect x="100" y="60" width="82" height="26" rx="8" class="f-core" /><text x="141" y="77" class="mid t-ink">capital_P…</text>
+            <rect x="188" y="60" width="82" height="26" rx="8" class="f-plugin" /><text x="229" y="77" class="mid t-ink">badge</text>
+            <text x="53" y="104" class="mid t-muted">isn't→isn’t</text><text x="141" y="104" class="mid t-muted">p→P</text><text x="229" y="104" class="mid t-muted">+ ✦</text>
+            <rect x="12" y="114" width="258" height="22" rx="11" fill="var(--bg)" /><text x="141" y="129" class="mid t-ink">"WordPress isn’t hard ✦"</text>
+          </g>
+        </g>
+      </svg>
+      <div class="body">
+        <h2>Metro line <span class="tag rec">My pick</span> <span class="tag">new · beginner-first</span></h2>
+        <p class="pitch"><b>The request is a train, and the hooks are stations along its line.</b> At an <b>action station</b> the train announces itself, and everyone waiting on the platform does their job in ticket order (priority). At a <b>filter workshop</b> each station takes the cargo, changes it and puts it back. The database is the depot, and the template hierarchy is a junction where signals pick the first platform that exists.</p>
+        <div class="pc">
+          <div><b>Why it works</b>Everyone has used a metro map, so there's nothing new to learn. "Hooks are stops where your code can hop on" is easy to hold onto. It keeps the 3D motion you liked from the marble. Other entry points (admin, REST, AJAX, cron) become other lines merging into the same trunk.</div>
+          <div><b>Watch out for</b>Analogies drift. Every sign uses the real WordPress name, and the developer layer shows the actual code, so the metaphor never replaces the truth.</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ B · DEV WORKSPACE ============ -->
+    <article class="concept">
+      <svg viewBox="0 0 640 400" role="img" aria-label="Dev workspace concept: a request card on a pipeline, an editor window listing listeners by priority">
+        <path id="pipe" d="M24 60 H616" stroke="var(--rail)" stroke-width="12" stroke-linecap="round" fill="none" />
+        <path d="M24 60 H616" stroke="var(--accent)" stroke-width="4" fill="none" class="flow" />
+        <g>
+          <rect x="0" y="-16" width="148" height="32" rx="16" class="s-card" />
+          <rect x="6" y="-10" width="38" height="20" rx="10" class="f-accent" /><text x="25" y="4" class="mono xs mid t-white" style="font-weight:700">GET</text>
+          <text x="52" y="4.5" class="mono sm t-ink">/hello-world/</text>
+          <animateTransform attributeName="transform" type="translate" values="28 60; 120 60; 120 60; 440 60; 440 60; 28 60" keyTimes="0;0.25;0.55;0.85;0.95;1" dur="8s" repeatCount="indefinite" />
+        </g>
+        <path d="M196 74 V100" class="s-wire" />
+        <!-- editor window: listeners by priority -->
+        <g transform="translate(24 100)">
+          <rect width="344" height="276" rx="16" class="s-card" />
+          <circle cx="18" cy="18" r="5" fill="#ff8a80" /><circle cx="34" cy="18" r="5" fill="#ffd36b" /><circle cx="50" cy="18" r="5" fill="#7fd8a0" />
+          <use href="#bell" x="70" y="9" width="18" height="18" style="color:var(--accent)" />
+          <text x="94" y="23" class="mono sm t-ink">do_action( 'init' )</text>
+          <text x="330" y="23" class="hud xs t-muted end">6 LISTENERS</text>
+          <path d="M0 36 H344" class="s-hair" />
+          <rect x="8" y="104" width="328" height="30" rx="8" class="f-soft" />
+          <g class="mono sm">
+            <text x="40" y="64" class="end t-muted">0</text><text x="52" y="64" class="t-accent">✓</text><text x="70" y="64" class="t-ink">create_initial_post_types</text>
+            <text x="40" y="94" class="end t-muted">1</text><text x="52" y="94" class="t-accent">✓</text><text x="70" y="94" class="t-ink">wp_widgets_init</text>
+            <text x="40" y="124" class="end t-ink" style="font-weight:700">5</text><text x="52" y="124" class="t-accent">▶</text><text x="70" y="124" class="t-ink" style="font-weight:700">smilies_init</text>
+            <text x="40" y="154" class="end t-muted">10</text><text x="70" y="154" class="t-muted">rest_api_init</text>
+            <text x="40" y="184" class="end t-muted">10</text><text x="70" y="184" class="t-muted">acme_register_cpt</text>
+            <text x="40" y="214" class="end t-muted">20</text><text x="70" y="214" class="t-muted">mytheme_init</text>
+          </g>
+          <g class="hud xs">
+            <rect x="282" y="52" width="48" height="16" rx="8" class="f-core" /><text x="306" y="64" class="mid t-ink">CORE</text>
+            <rect x="282" y="82" width="48" height="16" rx="8" class="f-core" /><text x="306" y="94" class="mid t-ink">CORE</text>
+            <rect x="282" y="112" width="48" height="16" rx="8" class="f-core" /><text x="306" y="124" class="mid t-ink">CORE</text>
+            <rect x="282" y="142" width="48" height="16" rx="8" class="f-core" /><text x="306" y="154" class="mid t-ink">CORE</text>
+            <rect x="282" y="172" width="48" height="16" rx="8" class="f-plugin" /><text x="306" y="184" class="mid t-ink">PLUGIN</text>
+            <rect x="282" y="202" width="48" height="16" rx="8" class="f-theme" /><text x="306" y="214" class="mid t-ink">THEME</text>
+          </g>
+          <path d="M0 238 H344" class="s-hair" />
+          <text x="16" y="260" class="hud xs t-muted">GUTTER = PRIORITY · ▶ = RUNNING NOW</text>
+        </g>
+        <!-- filter pipeline -->
+        <g transform="translate(392 100)" class="mono xs">
+          <text x="0" y="10" class="t-muted">apply_filters( 'the_title', $title )</text>
+          <rect x="0" y="22" width="224" height="26" rx="13" class="s-card" /><text x="112" y="39" class="mid t-ink">"Wordpress isn't hard"</text>
+          <path d="M112 50 V60" class="s-arrow" />
+          <rect x="0" y="62" width="224" height="26" rx="8" class="f-core" /><text x="12" y="79" class="t-ink">| wptexturize</text><text x="212" y="79" class="end t-ink">10</text>
+          <path d="M112 90 V100" class="s-arrow" />
+          <rect x="0" y="102" width="224" height="26" rx="8" class="f-core" /><text x="12" y="119" class="t-ink">| capital_P_dangit</text><text x="212" y="119" class="end t-ink">11</text>
+          <path d="M112 130 V140" class="s-arrow" />
+          <rect x="0" y="142" width="224" height="26" rx="8" class="f-plugin" /><text x="12" y="159" class="t-ink">| acme_add_badge</text><text x="212" y="159" class="end t-ink">20</text>
+          <path d="M112 170 V180" class="s-arrow" />
+          <rect x="0" y="182" width="224" height="26" rx="13" fill="var(--ink)" /><text x="112" y="199" class="mid t-white">"WordPress isn’t hard ✦"</text>
+          <text x="0" y="236" class="hud t-muted">LIKE A UNIX PIPE: VALUE IN, VALUE OUT</text>
+        </g>
+      </svg>
+      <div class="body">
+        <h2>Dev workspace <span class="tag">you asked how it looks</span></h2>
+        <p class="pitch"><b>Porcelain 3D versions of things developers use every day.</b> The request is an HTTP request card riding a pipeline. An action is a notification bell over an editor window: callbacks are lines, the <b>line-number gutter is the priority</b>, and a debugger cursor ▶ steps through them. A filter is a pipe chain (<code style="font-family:JetBrains Mono">$title | wptexturize | …</code>).</p>
+        <div class="pc">
+          <div><b>Why it works</b>It's native to developers and literally accurate, since WordPress really stores callbacks by priority number. All the text is easy to read, and it builds skills that carry over to debugging real code.</div>
+          <div><b>Watch out for</b>It feels more like a UI than a world, so there's less of the magical 3D motion. To someone who has never coded it can look "techy" and intimidating.</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ C · MARBLE + DEV PROPS ============ -->
+    <article class="concept">
+      <svg viewBox="0 0 640 400" role="img" aria-label="Marble run concept with developer props">
+        <path id="rail" d="M24 64 C 170 70, 230 120, 330 168 S 520 250, 616 284" stroke="var(--rail)" stroke-width="14" fill="none" stroke-linecap="round" />
+        <path d="M24 64 C 170 70, 230 120, 330 168 S 520 250, 616 284" stroke="#f5f5f7" stroke-width="5" fill="none" stroke-linecap="round" />
+        <!-- notification bell station -->
+        <path d="M236 116 V70" stroke="#c8cdd8" stroke-width="4" />
+        <circle cx="236" cy="52" r="22" class="s-card" />
+        <use href="#bell" x="222" y="38" width="28" height="28" style="color:var(--ink)" />
+        <circle cx="252" cy="36" r="8" class="f-accent" /><text x="252" y="40" class="mono xs mid t-white" style="font-weight:700">6</text>
+        <rect x="264" y="40" width="132" height="24" rx="12" class="s-card" /><text x="330" y="56" class="mono xs mid t-ink">do_action( 'init' )</text>
+        <!-- listener list -->
+        <g transform="translate(24 150)" class="mono xs">
+          <rect width="236" height="196" rx="14" class="s-card" />
+          <text x="14" y="22" class="hud t-muted">SUBSCRIBED TO INIT</text>
+          <path d="M0 32 H236" class="s-hair" />
+          <text x="30" y="54" class="end t-muted">0</text><text x="40" y="54" class="t-accent">✓</text><text x="54" y="54" class="t-ink">create_initial_post_types</text>
+          <text x="30" y="78" class="end t-muted">1</text><text x="40" y="78" class="t-accent">✓</text><text x="54" y="78" class="t-ink">wp_widgets_init</text>
+          <rect x="6" y="88" width="224" height="22" rx="6" class="f-soft" />
+          <text x="30" y="103" class="end t-ink">5</text><text x="40" y="103" class="t-accent">▶</text><text x="54" y="103" class="t-ink">smilies_init</text>
+          <text x="30" y="128" class="end t-muted">10</text><text x="54" y="128" class="t-muted">rest_api_init</text>
+          <text x="30" y="152" class="end t-muted">10</text><text x="54" y="152" class="t-muted">acme_register_cpt</text>
+          <text x="30" y="176" class="end t-muted">20</text><text x="54" y="176" class="t-muted">mytheme_init</text>
+        </g>
+        <!-- filter tubes along the rail -->
+        <g>
+          <rect x="400" y="190" width="58" height="34" rx="17" fill="color-mix(in srgb, var(--core) 45%, transparent)" stroke="var(--core)" stroke-width="3" transform="rotate(19 429 207)" />
+          <rect x="468" y="214" width="58" height="34" rx="17" fill="color-mix(in srgb, var(--core) 45%, transparent)" stroke="var(--core)" stroke-width="3" transform="rotate(17 497 231)" />
+          <rect x="536" y="236" width="58" height="34" rx="17" fill="color-mix(in srgb, var(--plugin) 45%, transparent)" stroke="var(--plugin)" stroke-width="3" transform="rotate(15 565 253)" />
+          <g class="mono xs t-ink"><text x="420" y="254" class="mid">wptexturize</text><text x="497" y="278" class="mid">capital_P…</text><text x="566" y="300" class="mid">badge</text></g>
+          <rect x="420" y="150" width="200" height="24" rx="12" class="s-card" /><text x="520" y="166" class="mono xs mid t-ink">the_title → "WordPress isn’t…"</text>
+        </g>
+        <circle r="12" fill="url(#pearl)" stroke="#c9cfe6"><animateMotion dur="7s" repeatCount="indefinite"><mpath href="#rail" /></animateMotion></circle>
+      </svg>
+      <div class="body">
+        <h2>Marble run + dev props <span class="tag">evolves round 2</span></h2>
+        <p class="pitch"><b>Keep the marble and the track you liked, and swap every prop for a dev object.</b> The bell becomes a notification-bell icon with a subscriber count. Callbacks are a "subscribed" list with priority gutters. The tubes become labelled pipeline segments.</p>
+        <div class="pc">
+          <div><b>Why it works</b>It's the least rework, and it keeps the playful motion. The labels and lists carry the accuracy.</div>
+          <div><b>Watch out for</b>The metaphor is mixed: a toy marble next to UI props. A first-timer will still ask "why is a page request a marble?"</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ D · PACKAGE LINE ============ -->
+    <article class="concept">
+      <svg viewBox="0 0 640 400" role="img" aria-label="Package line concept: your page is a package assembled on a conveyor">
+        <!-- warehouse = database -->
+        <g transform="translate(20 60)">
+          <rect width="86" height="96" rx="10" class="s-card" />
+          <path d="M8 34 H78 M8 62 H78" class="s-hair" />
+          <rect x="14" y="14" width="18" height="16" rx="3" class="f-core" /><rect x="36" y="14" width="18" height="16" rx="3" class="f-core" /><rect x="14" y="42" width="18" height="16" rx="3" class="f-core" />
+          <text x="43" y="114" class="hud xs mid t-muted">WAREHOUSE</text><text x="43" y="126" class="hud xs mid t-muted">= DATABASE</text>
+        </g>
+        <!-- conveyor -->
+        <rect x="116" y="146" width="500" height="20" rx="10" fill="var(--ink)" />
+        <g fill="#5a5e68"><circle cx="136" cy="156" r="5" /><circle cx="196" cy="156" r="5" /><circle cx="256" cy="156" r="5" /><circle cx="316" cy="156" r="5" /><circle cx="376" cy="156" r="5" /><circle cx="436" cy="156" r="5" /><circle cx="496" cy="156" r="5" /><circle cx="556" cy="156" r="5" /><circle cx="596" cy="156" r="5" /></g>
+        <!-- PA announcement -->
+        <use href="#speaker" x="208" y="44" width="24" height="24" style="color:var(--accent)" />
+        <text x="238" y="62" class="sans sm t-ink" style="font-weight:600">“init!”</text>
+        <!-- workers who act on init, in number order -->
+        <g transform="translate(126 182)">
+          <use href="#person" x="0" y="0" width="18" height="32" class="f-core" /><use href="#person" x="32" y="0" width="18" height="32" class="f-core" /><use href="#person" x="64" y="0" width="18" height="32" class="f-core" />
+          <use href="#person" x="96" y="0" width="18" height="32" class="f-core" /><use href="#person" x="128" y="0" width="18" height="32" class="f-plugin" /><use href="#person" x="160" y="0" width="18" height="32" fill="#d6d8de" />
+          <g class="hud xs t-muted"><text x="9" y="46" class="mid">0</text><text x="41" y="46" class="mid">1</text><text x="73" y="46" class="mid">5</text><text x="105" y="46" class="mid">10</text><text x="137" y="46" class="mid">10</text><text x="169" y="46" class="mid">20</text></g>
+          <text x="0" y="66" class="hud xs t-muted">WORKERS ACT ON THE ANNOUNCEMENT, IN NUMBER ORDER</text>
+        </g>
+        <!-- stamping stations = filters -->
+        <g class="mono xs">
+          <rect x="384" y="70" width="64" height="34" rx="8" class="f-core" /><rect x="410" y="104" width="12" height="30" fill="#9aa0ad" /><text x="416" y="91" class="mid t-ink">texturize</text>
+          <rect x="456" y="70" width="64" height="34" rx="8" class="f-core" /><rect x="482" y="104" width="12" height="30" fill="#9aa0ad" /><text x="488" y="91" class="mid t-ink">capital_P</text>
+          <rect x="528" y="70" width="64" height="34" rx="8" class="f-plugin" /><rect x="554" y="104" width="12" height="30" fill="#9aa0ad" /><text x="560" y="91" class="mid t-ink">badge</text>
+        </g>
+        <!-- the package (your page) -->
+        <g>
+          <path d="M0 -26 L24 -38 L48 -26 L24 -14 Z" fill="#f3e2c4" stroke="#c9b28a" />
+          <path d="M0 -26 V0 L24 12 V-14 Z" fill="#e8d1a8" stroke="#c9b28a" />
+          <path d="M48 -26 V0 L24 12 V-14 Z" fill="#dcc193" stroke="#c9b28a" />
+          <text x="24" y="-28" class="hud xs mid t-ink" style="font-size:8px">PAGE</text>
+          <animateTransform attributeName="transform" type="translate" values="120 146; 300 146; 300 146; 560 146" keyTimes="0;0.35;0.55;1" dur="8s" repeatCount="indefinite" />
+        </g>
+        <!-- label being restamped -->
+        <g transform="translate(330 300)" class="mono xs">
+          <rect width="286" height="68" rx="14" class="s-card" />
+          <text x="14" y="22" class="hud t-muted">THE PACKAGE LABEL (the_title)</text>
+          <text x="14" y="44" class="t-muted">"Wordpress isn't hard"</text>
+          <text x="14" y="60" class="t-ink" style="font-weight:700">→ "WordPress isn’t hard ✦"</text>
+        </g>
+        <g transform="translate(20 300)">
+          <rect width="290" height="68" rx="14" class="s-card" />
+          <text x="14" y="24" class="hud xs t-muted">AT THE END</text>
+          <text x="14" y="48" class="sans md t-ink" style="font-weight:600">📦 Shipped to your browser · 200 OK</text>
+        </g>
+      </svg>
+      <div class="body">
+        <h2>Package line <span class="tag">new · beginner-first</span></h2>
+        <p class="pitch"><b>Your web page is a package being assembled on a conveyor.</b> Items are pulled from the warehouse (the database). A speaker announces moments ("init!"), and workers act on them in number order. Filters are stamping stations that change the package label. At the end, the package ships to your browser.</p>
+        <div class="pc">
+          <div><b>Why it works</b>You literally watch the page get built, which makes filters and rendering very clear. Blocks become boxes inside boxes. It's very tangible for first-timers.</div>
+          <div><b>Watch out for</b>A factory can look busy and industrial, which is harder to keep Apple-sleek. Actions (announcements) and filters (stations) also use two different props.</div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <h3>How each WordPress idea looks in each world</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>WordPress</th><th class="rec">Metro line</th><th>Dev workspace</th><th>Marble + dev props</th><th>Package line</th></tr></thead>
+      <tbody>
+        <tr><td>the request</td><td class="rec">a train leaving "your browser"</td><td>HTTP request card on a pipeline</td><td>a marble on a track</td><td>an order that becomes a package</td></tr>
+        <tr><td>core files</td><td class="rec">stations: index.php, wp-config…</td><td>.php file blocks</td><td>track sections</td><td>assembly zones</td></tr>
+        <tr><td>action hook</td><td class="rec">a station announcement</td><td>notification bell + listener list</td><td>notification bell</td><td>a PA announcement</td></tr>
+        <tr><td>callbacks</td><td class="rec">people waiting on the platform</td><td>lines in an editor</td><td>rows in a subscriber list</td><td>workers by the belt</td></tr>
+        <tr><td>priority</td><td class="rec">ticket numbers (queue order)</td><td>line-number gutter</td><td>gutter numbers</td><td>worker numbers</td></tr>
+        <tr><td>filter hook</td><td class="rec">a workshop that changes the cargo</td><td>a pipe chain of transforms</td><td>labelled glass tubes</td><td>stamping stations</td></tr>
+        <tr><td>database</td><td class="rec">the depot</td><td>DB cylinder</td><td>DB cylinder</td><td>the warehouse</td></tr>
+        <tr><td>template hierarchy</td><td class="rec">junction signals pick a platform</td><td>file-tree explorer</td><td>coin sorter</td><td>box picker</td></tr>
+        <tr><td>entry points</td><td class="rec">other metro lines merging in</td><td>other pipelines</td><td>other tracks</td><td>other loading docks</td></tr>
+        <tr><td>blocks</td><td class="rec">the train's carriages</td><td>nested components</td><td>nested blocks</td><td>boxes inside boxes</td></tr>
+        <tr><td>the response</td><td class="rec">arrives back at "your browser"</td><td>200 OK response card</td><td>marble exits</td><td>package shipped</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The whole story for a first-timer (metro version)</h3>
+  <div class="story">
+    <div class="stop"><div class="n">STOP 0 · NEW CHAPTER</div><div class="t">Before WordPress</div><div class="d">You type a URL. Your browser buys a "ticket" (the request) and sends it to a server, the computer that hosts the site.</div></div>
+    <div class="stop"><div class="n">STOP 1</div><div class="t">The front door</div><div class="d"><code>index.php</code> is the station every visit arrives at first.</div></div>
+    <div class="stop"><div class="n">STOP 2</div><div class="t">The control room</div><div class="d"><code>wp-config.php</code> knows where the database is and holds the site's secret keys.</div></div>
+    <div class="stop"><div class="n">STOP 3</div><div class="t">Waking up</div><div class="d"><code>wp-settings.php</code> is the big interchange. The plugins line and the theme line join here.</div></div>
+    <div class="stop"><div class="n">STOP 4</div><div class="t">The first big announcement</div><div class="d"><code>init</code>: everyone who subscribed with <code>add_action</code> gets their turn, in ticket order.</div></div>
+    <div class="stop"><div class="n">STOP 5</div><div class="t">The depot</div><div class="d"><code>WP_Query</code> fetches your posts from the database.</div></div>
+    <div class="stop"><div class="n">STOP 6</div><div class="t">The junction</div><div class="d">The template hierarchy: signals send the train to the first platform that exists, like <code>single.php</code>.</div></div>
+    <div class="stop"><div class="n">STOP 7</div><div class="t">The workshops</div><div class="d">Filters like <code>the_title</code> change what's on board before it's shown.</div></div>
+    <div class="stop"><div class="n">STOP 8</div><div class="t">Back home</div><div class="d"><code>200 OK</code>: the finished HTML arrives in your browser, and WordPress cleans up (<code>shutdown</code>).</div></div>
+  </div>
+  <p class="note">↑ Same 9 stops in any world we pick. Only the props change.</p>
+</div>
+</body>
+</html>
