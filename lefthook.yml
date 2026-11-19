@@ -1,4 +1,5 @@
 # Git hooks: fast checks on commit, the full test suite on push.
+rc: ./.lefthookrc
 pre-commit:
   parallel: true
   commands:
