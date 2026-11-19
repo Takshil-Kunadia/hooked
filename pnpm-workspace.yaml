@@ -1,0 +1,7 @@
+# Supply-chain guard: don't install package versions published less than a day ago.
+minimumReleaseAge: 1440
+allowBuilds:
+  lefthook: true
+  sharp: false
+  unrs-resolver: false
+savePrefix: ""
