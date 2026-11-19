@@ -47,3 +47,6 @@ next-env.d.ts
 # design-round screenshots stay local (regenerable, ~23 MB)
 /explorations/**/screenshots/
 /explorations/concepts/*.png
+
+# wp-data downloads and Playground logs
+/.cache/
