@@ -16,7 +16,14 @@ export default defineConfig({
       provider: "v8",
       include: ["src/lib/**/*.{ts,tsx}"],
       exclude: ["src/**/*.test.{ts,tsx}"],
-      thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+        // The Hook Lab and the story trust this engine to behave exactly like WordPress.
+        "src/lib/hook-engine/**": { lines: 95, functions: 95, branches: 95, statements: 95 },
+      },
     },
   },
 });
