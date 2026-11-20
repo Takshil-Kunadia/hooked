@@ -11,11 +11,14 @@ import {
 import { useStore } from "zustand";
 import type { CardInfo } from "@/lib/story/cards";
 import { graceMs, pointerHover } from "@/lib/story/hover-intent";
+import { isLinked, linkedCard } from "@/lib/story/linked";
 import { placeCardNear, type Rect } from "@/lib/story/placement";
 import { storyStore, type StoryState } from "@/lib/story/store";
 import { avoidRects } from "./dom";
 
 const CARD = "[data-card]";
+/** Copy words (`<Hook>`, server-rendered); board rows mark their own link in React. */
+const WORD = "code[data-card]";
 /** The stage container: clicks there belong to 3D picking (a hit pins, a miss unpins). */
 const STAGE = "[data-stage]";
 const FOCUSABLE = "a[href], button";
@@ -48,6 +51,13 @@ function closeCard(ctx: CardContext, card: HTMLElement | null): void {
   const returnTo = card?.contains(document.activeElement) && ctx.anchor instanceof HTMLElement ? ctx.anchor : null;
   storyStore.getState().pin(null);
   returnTo?.focus({ preventScroll: true });
+}
+
+/** Marks every copy word showing the open card, wherever it was opened (a word, a row, the map). */
+function markLinkedWords(linked: string | null): void {
+  for (const el of document.querySelectorAll(WORD)) {
+    el.toggleAttribute("data-linked", isLinked(el.getAttribute("data-card") ?? "", linked));
+  }
 }
 
 /** Whether a copy word is where the story is: in the current beat, or after the current act's beats. */
@@ -140,12 +150,13 @@ function bindCards(ctx: CardContext, cardRef: RefObject<HTMLDivElement | null>):
   };
   /* resolve where the card points whenever its name changes; follow the beat when it moves on */
   const unsubscribe = storyStore.subscribe((s, prev) => {
-    const name = s.pinned ?? s.hovered;
+    const name = linkedCard(s);
     const source = ctx.source;
     ctx.source = null;
-    if (name !== (prev.pinned ?? prev.hovered)) {
+    if (name !== linkedCard(prev)) {
       const fromWord = source !== null && source.getAttribute("data-card") === name;
       ctx.anchor = name === null ? null : fromWord ? source : ctx.pointer;
+      markLinkedWords(name);
     }
     if (s.globalIndex !== prev.globalIndex) followBeat(ctx, cardRef.current, s);
   });
@@ -215,7 +226,7 @@ interface HookCardProps {
 
 /** The hover card for copy words, board rows and 3D map objects. */
 export function HookCard({ cards, wp }: HookCardProps) {
-  const name = useStore(storyStore, (s) => s.pinned ?? s.hovered);
+  const name = useStore(storyStore, linkedCard);
   const pinned = useStore(storyStore, (s) => s.pinned !== null);
   const [ctx] = useState(createContext);
   const cardRef = useRef<HTMLDivElement>(null);
