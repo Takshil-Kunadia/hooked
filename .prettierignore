@@ -9,3 +9,4 @@ src/app/fonts/
 .lefthookrc
 content/versions
 tools/hook-engine/expected
+.superpowers/
