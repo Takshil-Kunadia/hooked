@@ -2,6 +2,8 @@
  * Hover cards a pointer opens, made hoverable (WCAG 1.4.13): a card stays open while the pointer is
  * on what opened it (a copy word, a board row, a map object) or on the card itself, waits out a
  * grace period once the pointer is on neither (to cross the gap between them), and Esc dismisses it.
+ * On its way from a copy word to the word's card the pointer may cross the 3D map, so during that
+ * grace period the map can't take over: the object under the pointer waits its turn (`held`).
  * Focus opens cards too, but directly through the store: this is for the pointer only.
  */
 import type { Rect } from "./placement";
@@ -14,40 +16,67 @@ export const MAX_GRACE_MS = 900;
 /** Extra grace per pixel between the anchor and the card: crossing at one pixel per millisecond. */
 const GRACE_MS_PER_PX = 1;
 
+/** Where an anchor is: in the page (a copy word, a board row) or on the 3D map. */
+type AnchorSource = "page" | "map";
+
 export interface HoverIntent {
   /** The card the pointer opened, or null. */
   readonly name: string | null;
+  /** What kind of anchor opened it. */
+  readonly source: AnchorSource | null;
   readonly onAnchor: boolean;
   readonly onCard: boolean;
+  /** A map object under the pointer, waiting for a word's card to finish its grace period. */
+  readonly held: string | null;
 }
 
 export type HoverEvent =
-  /** The pointer is over this anchor now, or (null) over none. */
-  | { readonly type: "anchor"; readonly name: string | null }
+  /** The pointer is over this anchor now, or (null) over none of this source's anchors. */
+  | { readonly type: "anchor"; readonly name: string | null; readonly from: AnchorSource }
   | { readonly type: "card"; readonly inside: boolean }
   /** The grace period ran out. */
   | { readonly type: "expire" }
   /** Esc. */
   | { readonly type: "dismiss" };
 
-export const NO_HOVER: HoverIntent = { name: null, onAnchor: false, onCard: false };
+export const NO_HOVER: HoverIntent = { name: null, source: null, onAnchor: false, onCard: false, held: null };
+
+const opened = (name: string, source: AnchorSource, onCard: boolean): HoverIntent => ({
+  name,
+  source,
+  onAnchor: true,
+  onCard,
+  held: null,
+});
+
+function pointerLeft(s: HoverIntent, from: AnchorSource): HoverIntent {
+  const held = from === "map" ? null : s.held;
+  const onAnchor = s.onAnchor && s.source !== from;
+  return held === s.held && onAnchor === s.onAnchor ? s : { ...s, held, onAnchor };
+}
 
 export function nextHover(s: HoverIntent, e: HoverEvent): HoverIntent {
   switch (e.type) {
     case "anchor":
-      if (e.name !== null) return { name: e.name, onAnchor: true, onCard: e.name === s.name && s.onCard };
-      return s.onAnchor ? { ...s, onAnchor: false } : s;
+      if (e.name === null) return pointerLeft(s, e.from);
+      if (e.from === "map" && s.source === "page" && isLeaving(s))
+        return s.held === e.name ? s : { ...s, held: e.name };
+      return opened(e.name, e.from, e.name === s.name && s.onCard);
     case "card":
-      return s.name === null || s.onCard === e.inside ? s : { ...s, onCard: e.inside };
+      if (s.name === null || (s.onCard === e.inside && (!e.inside || s.held === null))) return s;
+      return { ...s, onCard: e.inside, held: e.inside ? null : s.held };
     case "expire":
-      return s.onAnchor || s.onCard ? s : NO_HOVER;
+      if (s.onAnchor || s.onCard) return s;
+      return s.held === null ? NO_HOVER : opened(s.held, "map", false);
     case "dismiss":
       return NO_HOVER;
   }
 }
 
 /** True while a card waits out its grace period: open, with the pointer on neither it nor its anchor. */
-export const isLeaving = (s: HoverIntent): boolean => s.name !== null && !s.onAnchor && !s.onCard;
+export function isLeaving(s: HoverIntent): boolean {
+  return s.name !== null && !s.onAnchor && !s.onCard;
+}
 
 /** How long a card waits for the pointer: longer the further it sits from what opened it. */
 export function graceMs(anchor: Rect, card: Rect): number {

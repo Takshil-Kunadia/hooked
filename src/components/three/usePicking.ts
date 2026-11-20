@@ -75,7 +75,7 @@ function startPicking(canvas: HTMLCanvasElement, camera: Camera, scene: Scene): 
     if (name === hovered) return;
     hovered = name;
     canvas.style.cursor = name ? HOVER_CURSOR : "";
-    pointerHover.send({ type: "anchor", name });
+    pointerHover.send({ type: "anchor", name, from: "map" });
   };
   const flushHover = (): void => {
     frame = 0;

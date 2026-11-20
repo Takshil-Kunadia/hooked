@@ -100,12 +100,12 @@ function bindCards(ctx: CardContext, cardRef: RefObject<HTMLDivElement | null>):
     const hit = e.pointerType === "touch" ? null : cardHost(e.target);
     if (!hit) return;
     ctx.source = hit[0];
-    pointerHover.send({ type: "anchor", name: hit[1] });
+    pointerHover.send({ type: "anchor", name: hit[1], from: "page" });
   };
   const onOut = (e: PointerEvent): void => {
     const hit = e.pointerType === "touch" ? null : cardHost(e.target);
     if (!hit || (e.relatedTarget instanceof Node && hit[0].contains(e.relatedTarget))) return;
-    pointerHover.send({ type: "anchor", name: null });
+    pointerHover.send({ type: "anchor", name: null, from: "page" });
   };
   const onFocusIn = (e: FocusEvent): void => {
     const hit = cardHost(e.target);
