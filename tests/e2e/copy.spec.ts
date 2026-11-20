@@ -1,11 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { onlyDesktop, openAct, stage, stepTo, visit } from "./helpers";
+import { expectBeat, onlyDesktop, openAct, stepTo, visit, withoutStage } from "./helpers";
 
 /** Longer than any hover card's grace period (hover-intent.ts caps it at 900 ms). */
 const PAST_GRACE_MS = 1200;
 /** Tab stops between the top of the page and the first word of the init act, with room to spare. */
 const MAX_TABS = 60;
-const SLOW_TEST_MS = 180_000;
 
 /** Whether the focused element is on screen: inside the viewport, under no clip, in a shown pin. */
 const focusedIsVisible = (page: Page): Promise<boolean> =>
@@ -24,6 +23,7 @@ const focusedIsVisible = (page: Page): Promise<boolean> =>
 
 test.describe("the copy", () => {
   test("every act's copy is in the accessibility tree", async ({ page }) => {
+    await withoutStage(page);
     await page.goto("/");
     await expect(page.locator("#before [data-pin]")).toHaveAttribute("data-off", "");
     const snapshot = await page.locator("main").ariaSnapshot();
@@ -49,16 +49,16 @@ test.describe("the copy", () => {
   });
 
   test("tabbing into a later act shows the focused word there", async ({ page }) => {
-    test.setTimeout(SLOW_TEST_MS);
-    await page.goto("/");
-    await expect(stage(page)).toHaveAttribute("data-beat", "hero/0", { timeout: 20_000 });
+    await withoutStage(page);
+    await visit(page, "/");
+    await expectBeat(page, "hero/0");
     for (let i = 0; i < MAX_TABS; i += 1) {
       await page.keyboard.press("Tab");
       if (await page.evaluate(() => document.activeElement?.closest("#init") != null)) break;
     }
     const focused = page.locator(":focus");
     await expect(focused).toHaveAttribute("data-card", "init");
-    await expect(stage(page)).toHaveAttribute("data-beat", "init/0", { timeout: 30_000 });
+    await expectBeat(page, "init/0");
     await expect.poll(() => focusedIsVisible(page), { timeout: 15_000 }).toBe(true);
   });
 
@@ -66,9 +66,7 @@ test.describe("the copy", () => {
     onlyDesktop(testInfo);
     await page.setViewportSize({ width: 1440, height: 900 });
     /* a DOM card's timing, so run without the stage: SwiftShader stalls would eat the grace period */
-    await page.addInitScript(() => {
-      HTMLCanvasElement.prototype.getContext = () => null;
-    });
+    await withoutStage(page);
     await visit(page, "/#boot");
     await expect(page.locator("#boot [data-pin]")).not.toHaveAttribute("data-off", "");
     const word = page.locator('#boot code[data-card="wp-load.php"]');
@@ -100,10 +98,10 @@ test.describe("the copy", () => {
 
   test("a card's name lights up in the copy and on the board, both ways", async ({ page }, testInfo) => {
     onlyDesktop(testInfo);
-    test.setTimeout(SLOW_TEST_MS);
+    await withoutStage(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await openAct(page, "boot");
-    for (const beat of ["boot/1", "boot/2", "boot/3"]) await stepTo(page, beat);
+    for (const beat of ["boot/1", "boot/2", "boot/3"] as const) await stepTo(page, beat);
     const row = (name: string) => page.locator(`.board tr[data-card="${name}"]`);
     const word = (name: string) => page.locator(`#boot [data-beats] code[data-card="${name}"]`);
     await expect(row("plugins_loaded")).toBeVisible();
