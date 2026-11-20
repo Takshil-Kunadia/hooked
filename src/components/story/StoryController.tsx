@@ -12,6 +12,7 @@ import {
   SNAP_IDLE_MS,
   type ActShape,
 } from "@/lib/story/pins";
+import { REDUCED_MOTION_QUERY, syncReducedMotion } from "@/lib/story/reduced-motion";
 import { beatScrollY, positionAt, type MeasuredAct, type StoryPosition } from "@/lib/story/scroll";
 import { storyStore } from "@/lib/story/store";
 import { measureStory, pinHeight, scrollToY } from "./dom";
@@ -67,8 +68,11 @@ const samePlace = (a: StoryPosition | null, b: StoryPosition): boolean =>
  * Drives the story from the page's scroll position: reports the beat to the store, fades the copy,
  * snaps to the nearest beat after 160ms idle (unless `?snap=off` or reduced motion), steps beats on
  * ↓/↑/Space/PageUp/PageDown, and re-measures when the width changes (any resize on a fine pointer).
+ * It owns the store's reduced-motion flag; with reduced motion every scroll it makes is instant.
  */
 function startStory(shape: ReadonlyArray<ActShape>): () => void {
+  /* first, so snapping, keys and the rail read the right flag even before (or without) the 3D stage */
+  const stopMotionSync = syncReducedMotion(storyStore, window.matchMedia(REDUCED_MOTION_QUERY));
   const paint = createPainter(shape.map(nodesOf));
   const snapOff = new URLSearchParams(window.location.search).get("snap") === "off";
   const coarse = window.matchMedia(COARSE_POINTER);
@@ -169,6 +173,7 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
 
   return () => {
     stopped = true;
+    stopMotionSync();
     for (const [type, fn] of listeners) window.removeEventListener(type, fn);
     cancelAnimationFrame(frame);
     window.clearTimeout(snapTimer);

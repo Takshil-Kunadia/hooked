@@ -8,8 +8,7 @@ import type { StoryData } from "@/lib/story/facts";
 import { pillText } from "@/lib/story/pill";
 import { BREATHER_VH } from "@/lib/story/scroll";
 import { Act } from "./Act";
-import { DepartureBoard } from "./DepartureBoard";
-import { HookCard } from "./HookCard";
+import { LazyDepartureBoard, LazyHookCard } from "./LazyIslands";
 import { ProgressRail } from "./ProgressRail";
 import { StoryController } from "./StoryController";
 import { TrainPill } from "./TrainPill";
@@ -36,7 +35,7 @@ const boardBeats = (flat: ReadonlyArray<FlatBeat>, actId: string) =>
 
 /**
  * The scroll story: the 3D stage, one pinned section per act with its numbered beats, and the small
- * client islands that drive it (controller, rail, boards, pill, hover card).
+ * client islands that drive it (controller, rail, boards, pill, hover card; the last two load lazily).
  *
  * The chapter's first act is the page's hero: the page renders it as `<section id={spec.acts[0].id}>`
  * around the LCP `<h1>`, right before `<Story>`, so the hero paints first and stays server-rendered.
@@ -60,7 +59,7 @@ export function Story({ spec, copy, data, explainers }: StoryProps) {
           <Fragment key={act.id}>
             <Act act={act} copy={copy}>
               {boards.length > 0 && (
-                <DepartureBoard
+                <LazyDepartureBoard
                   beats={boards}
                   cues={cues}
                   tickets={data.tickets.shown}
@@ -75,7 +74,7 @@ export function Story({ spec, copy, data, explainers }: StoryProps) {
       })}
       <ProgressRail acts={shape} steps={steps} />
       <TrainPill texts={pills} />
-      <HookCard cards={cards} wp={data.wp} />
+      <LazyHookCard cards={cards} wp={data.wp} />
       <StoryController acts={shape} />
     </>
   );
