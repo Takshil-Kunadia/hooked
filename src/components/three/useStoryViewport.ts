@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { layoutMode } from "@/lib/story/layout";
+import { REDUCED_MOTION_QUERY, syncReducedMotion } from "@/lib/story/reduced-motion";
 import { storyStore } from "@/lib/story/store";
 
 const COARSE_POINTER = "(pointer: coarse)";
@@ -9,7 +10,8 @@ const COARSE_POINTER = "(pointer: coarse)";
 /**
  * Keeps the story store's layout mode in step with the viewport. On touch screens a resize that only
  * changes the height (the URL bar sliding, the keyboard) is ignored, so the scene never jumps
- * mid-scroll. The reduced-motion flag comes from the story's DOM controller (lib/story/reduced-motion).
+ * mid-scroll. It also follows prefers-reduced-motion through the same helper the story's DOM controller
+ * uses, so the stage honours it even when the story is not mounted (both writes are idempotent).
  */
 export function useStoryViewport(): void {
   useEffect(() => {
@@ -27,6 +29,10 @@ export function useStoryViewport(): void {
 
     onResize();
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const stopReducedMotion = syncReducedMotion(storyStore, window.matchMedia(REDUCED_MOTION_QUERY));
+    return () => {
+      window.removeEventListener("resize", onResize);
+      stopReducedMotion();
+    };
   }, []);
 }
