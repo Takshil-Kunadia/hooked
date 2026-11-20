@@ -86,5 +86,6 @@ export interface StoryData {
   readonly status: number;
   readonly tickets: Tickets;
   readonly bootAnnouncements: string[];
+  /** Where core fires each hook "Under the hood" lists, in the order the hooks first fired. */
   readonly sources: Readonly<Record<string, { file: string; line: number; url: string }>>;
 }

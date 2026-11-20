@@ -1,14 +1,24 @@
-import { StageMount } from "@/components/three/StageMount";
+import { Story } from "@/components/story/Story";
+import { CHAPTER_1_COPY } from "@/content/chapter-1/copy";
+import { CHAPTER_1, HERO_ACT_ID } from "@/content/chapter-1/spec";
+import { getStoryData } from "@/lib/story/data";
+import explainers from "../../content/explainers.json";
 
-export default function Home() {
+/**
+ * The page is Chapter 1. Its hero is the chapter's first act: the `<h1>` stays the first thing
+ * painted (the LCP element), and Story renders the stage and every act after it. The hero lets
+ * clicks through to the 3D scene; only its text takes them.
+ */
+export default async function Home() {
+  const data = await getStoryData();
   return (
     <main className="relative min-h-svh overflow-x-clip">
-      <StageMount />
       <section
+        id={HERO_ACT_ID}
         aria-labelledby="hero-title"
-        className="relative z-10 flex min-h-svh items-end px-4 pb-[11svh] sm:px-[clamp(80px,9vw,150px)]"
+        className="pointer-events-none relative z-10 flex min-h-svh items-end px-4 pb-[11svh] sm:px-[clamp(80px,9vw,150px)]"
       >
-        <div className="max-w-[1180px]">
+        <div className="pointer-events-auto max-w-[1180px]">
           <p className="font-hud mb-5 text-xs tracking-[0.08em] text-muted uppercase">
             Chapter 1 · The journey of a request
           </p>
@@ -24,6 +34,7 @@ export default function Home() {
           </p>
         </div>
       </section>
+      <Story spec={CHAPTER_1} copy={CHAPTER_1_COPY} data={data} explainers={explainers} />
     </main>
   );
 }
