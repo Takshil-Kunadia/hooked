@@ -1,6 +1,7 @@
 /**
  * Keyboard stepping through the story's beats: which keys step, and when the page must leave a key
- * alone because the focused element uses it (Space or Enter activates a summary, button or link).
+ * alone because the focused element uses it (Space or Enter activates a summary, button or link;
+ * text entry uses every key).
  */
 
 export interface KeyLike {
@@ -36,12 +37,22 @@ export function stepDirection(e: KeyLike): 1 | -1 | null {
   return null;
 }
 
-const INTERACTIVE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT", "BUTTON", "SUMMARY", "A"]);
+/** Controls that use every key: typing, moving the caret, picking an option. */
+const TEXT_ENTRY_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
+/** Controls that Space and Enter activate; the arrow and page keys still step past them. */
+const ACTIVATOR_TAGS = new Set(["BUTTON", "SUMMARY", "A"]);
+const ACTIVATING_KEYS = new Set([SPACE, "Enter"]);
 
-/** True when the element, or one of its ancestors, is a form control, summary, button, link or editable. */
-export function isInteractive(el: ElementLike | null): boolean {
+/**
+ * True when the focused element (or an ancestor) uses `key` itself, so the page must not step:
+ * text entry and editable content keep every key; a summary, button or link keeps Space and Enter.
+ */
+export function focusOwnsKey(el: ElementLike | null, key: string): boolean {
+  const activating = ACTIVATING_KEYS.has(key);
   for (let node = el; node; node = node.parentElement) {
-    if (node.isContentEditable === true || INTERACTIVE_TAGS.has(node.tagName.toUpperCase())) return true;
+    const tag = node.tagName.toUpperCase();
+    if (node.isContentEditable === true || TEXT_ENTRY_TAGS.has(tag)) return true;
+    if (activating && ACTIVATOR_TAGS.has(tag)) return true;
   }
   return false;
 }

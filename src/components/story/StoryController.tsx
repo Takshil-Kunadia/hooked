@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import { isInteractive, stepDirection } from "@/lib/story/keys";
+import { focusOwnsKey, stepDirection } from "@/lib/story/keys";
 import {
   activeBeatOf,
   copyVisibility,
@@ -129,7 +129,7 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
   const onKey = (e: Event): void => {
     if (!(e instanceof KeyboardEvent)) return;
     const direction = stepDirection(e);
-    if (direction === null || e.defaultPrevented || isInteractive(document.activeElement)) return;
+    if (direction === null || e.defaultPrevented || focusOwnsKey(document.activeElement, e.key)) return;
     const target = keyTarget(acts, stepping ?? window.scrollY, vh, direction);
     if (target === null) return;
     e.preventDefault();
