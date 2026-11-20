@@ -19,6 +19,9 @@ export const BEATS = [
   "next/0",
 ] as const;
 
+/** The acts of Chapter 1: the part of a beat name before the slash. */
+export type Act = (typeof BEATS)[number] extends `${infer A}/${number}` ? A : never;
+
 /** The fixed 3D stage wrapper, which carries `data-beat` and `data-train`. */
 export const stage = (page: Page): Locator => page.locator("[data-beat]");
 
@@ -47,25 +50,66 @@ export function onlyDesktop(testInfo: TestInfo): void {
   testInfo.skip(testInfo.project.name !== "desktop", "sets its own viewports; one project is enough");
 }
 
+/**
+ * Makes `getContext` fail, so the page runs in its copy-only mode: no 3D chunk, no scene, nothing
+ * rendering on the CPU. For tests of page/DOM behaviour, which SwiftShader frames would otherwise
+ * starve on a slow runner. Call before the first navigation.
+ */
+export async function withoutStage(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    HTMLCanvasElement.prototype.getContext = () => null;
+  });
+}
+
+/**
+ * The story-steps rail's buttons: one per beat, in order. By CSS, not by role: on narrow screens the
+ * rail is hidden from view, but it is still in the DOM and still says which beat is current.
+ */
+export const railButtons = (page: Page): Locator => page.locator('nav[aria-label="Story steps"] button');
+
+/**
+ * The expected beat as the DOM shows it (no stage needed): the rail's `aria-current="step"` button
+ * is the story's current beat, so this checks the beat by its position in {@link BEATS}.
+ */
+export async function expectBeat(page: Page, expected: (typeof BEATS)[number], timeout = 15_000): Promise<void> {
+  await expect(railButtons(page).nth(BEATS.indexOf(expected))).toHaveAttribute("aria-current", "step", { timeout });
+}
+
 /** Presses ArrowDown once and waits for the beat to change to `expected`. */
-export async function stepTo(page: Page, expected: string): Promise<void> {
+export async function stepTo(page: Page, expected: (typeof BEATS)[number]): Promise<void> {
+  await page.keyboard.press("ArrowDown");
+  await expectBeat(page, expected);
+}
+
+/** `stepTo` for the scene tests, which read the beat the 3D stage reports. */
+export async function stageStepTo(page: Page, expected: string): Promise<void> {
   await page.keyboard.press("ArrowDown");
   await expect(stage(page)).toHaveAttribute("data-beat", expected, { timeout: 30_000 });
 }
 
 /**
- * A full page load of `url`. A hash-only change on the same page is not a load, and the controller
- * applies `#act` only on load, so go through about:blank first.
+ * Waits until the story controller is running. The copy and the rail are server-rendered, so they
+ * look ready (hero/0 is already "current") before the page has hydrated; a key or Tab pressed then
+ * goes unheard. The controller's first paint sets `--vis` on the act pins, which marks it as live.
+ */
+async function storyReady(page: Page): Promise<void> {
+  await expect(page.locator("[data-pin]").first()).toHaveAttribute("style", /--vis/, { timeout: 30_000 });
+}
+
+/**
+ * A full page load of `url`, once the story is running. A hash-only change on the same page is not
+ * a load, and the controller applies `#act` only on load, so go through about:blank first.
  */
 export async function visit(page: Page, url: string): Promise<void> {
   await page.goto("about:blank");
   await page.goto(url);
+  await storyReady(page);
 }
 
 /** Opens `/#<act>` (snap stays on) and waits until the story reports that act's first beat. */
-export async function openAct(page: Page, act: string): Promise<void> {
+export async function openAct(page: Page, act: Act): Promise<void> {
   await visit(page, `/#${act}`);
-  await expect(stage(page)).toHaveAttribute("data-beat", `${act}/0`, { timeout: 15_000 });
+  await expectBeat(page, `${act}/0` as (typeof BEATS)[number]);
 }
 
 /** One observed state of the stage wrapper: `at` is performance.now() in the page (ms). */
