@@ -17,7 +17,10 @@ interface CameraSpec {
   readonly overview: { readonly look: Vec3; readonly dist: number; readonly elev: number };
 }
 
-/** Round 5's framing, with each overview retuned to fit the longer line. */
+/**
+ * Round 5's framing, with each overview retuned to fit the longer line (R15 widened Stop 0: look x
+ * follows the line's centre, and dist and look y grow together so the composition holds).
+ */
 export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
   stacked: {
     fov: 30,
@@ -25,7 +28,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 46,
     shiftFrac: 0,
     lookY: -4.8,
-    overview: { look: [0.7, -9.5, 1], dist: 52, elev: 44 },
+    overview: { look: [-0.8, -9.5, 1], dist: 52, elev: 44 },
   },
   tablet: {
     fov: 30,
@@ -33,7 +36,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 42,
     shiftFrac: 0.34,
     lookY: -0.9,
-    overview: { look: [0.7, -6.5, 1], dist: 64, elev: 38 },
+    overview: { look: [-0.8, -6.9, 1], dist: 68, elev: 38 },
   },
   desktop: {
     fov: 30,
@@ -41,7 +44,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 42,
     shiftFrac: 0.36,
     lookY: -1.0,
-    overview: { look: [0.7, -6.8, 1], dist: 58, elev: 37 },
+    overview: { look: [-0.8, -7.3, 1], dist: 62, elev: 37 },
   },
   wide: {
     fov: 30,
@@ -49,7 +52,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 41,
     shiftFrac: 0.38,
     lookY: -1.0,
-    overview: { look: [0.7, -6.2, 1], dist: 52, elev: 36 },
+    overview: { look: [-0.8, -6.6, 1], dist: 55.5, elev: 36 },
   },
 };
 

@@ -27,7 +27,7 @@ export const MAIN_LINE: LineSpec = {
   id: "main",
   kind: "main",
   points: [
-    [-21, -3],
+    [-24, -3],
     [-8, -3],
     [-5, 0],
     [6.5, 0],
@@ -67,19 +67,22 @@ export interface Station {
   readonly card: string;
 }
 
-/** Every station, in travel order. */
+/**
+ * Every station, in travel order. Stop 0 (browser, web server, PHP) is spaced 4.5 apart (R15), so
+ * the 4-unit train parked at one station never covers the next one's marker.
+ */
 export const STATIONS: ReadonlyArray<Station> = [
   {
     id: "browser",
     title: "your browser",
     sub: "start & finish",
-    x: -21,
+    x: -24,
     z: -3,
     labelSide: -1,
     len: 1.3,
     card: "browser",
   },
-  { id: "server", title: "web server", sub: "nginx or Apache", x: -18, z: -3, labelSide: 1, card: "web server" },
+  { id: "server", title: "web server", sub: "nginx or Apache", x: -19.5, z: -3, labelSide: 1, card: "web server" },
   { id: "php", title: "PHP", sub: "runs the code", x: -15, z: -3, labelSide: -1, card: "PHP" },
   { id: "index", title: "index.php", sub: "front door", x: -12, z: -3, labelSide: 1, card: "index.php" },
   { id: "config", title: "wp-config.php", sub: "control room", x: -9, z: -3, labelSide: -1, card: "wp-config.php" },
