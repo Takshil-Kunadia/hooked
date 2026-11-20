@@ -152,21 +152,35 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
     stepping = target;
     scrollToY(target, !storyStore.getState().reducedMotion);
   };
-  /* Tab into copy that isn't on screen (another act, or a beat a stacked sheet hides): go to its beat */
+  /*
+   * Tab into copy that isn't on screen (another act, or a beat a stacked sheet hides): go to its beat.
+   * Decided a frame later, for whatever has focus then, after the browser's own scroll to it.
+   */
+  const followFocus = (): void => {
+    focusFrame = 0;
+    const el = document.activeElement;
+    const spot = el ? locateCopy(nodes, el) : null;
+    const act = spot ? acts[spot.actIndex] : undefined;
+    if (!el || !spot || !act) return;
+    const y = window.scrollY;
+    const keyboard = el.matches(":focus-visible");
+    const goal = focusTarget(shape, positionAt(acts, y, vh), spot, keyboard, copyVisibility(act, y, vh) >= 1);
+    const goalAct = goal ? acts[goal.actIndex] : undefined;
+    if (goal && goalAct) {
+      stepping = beatScrollY(goalAct, goal.beat, vh);
+      scrollToY(stepping, !storyStore.getState().reducedMotion);
+    } else if (keyboard && programmaticScrollInFlight()) {
+      /* the focused copy is on screen here: an earlier scroll must not carry it away */
+      stepping = null;
+      scrollToY(y, false);
+    }
+  };
   const onFocusIn = (e: Event): void => {
-    const el = e.target;
-    if (!(el instanceof Element) || !(e instanceof FocusEvent)) return;
-    if (e.relatedTarget instanceof Element && e.relatedTarget.closest(CARD_PANEL)) return;
-    const spot = locateCopy(nodes, el);
-    const at = positionAt(acts, window.scrollY, vh);
-    const goal = spot && focusTarget(shape, at, spot, el.matches(":focus-visible"));
-    const act = goal ? acts[goal.actIndex] : undefined;
-    if (!goal || !act) return;
-    const target = beatScrollY(act, goal.beat, vh);
-    stepping = target;
     cancelAnimationFrame(focusFrame);
-    /* next frame: after the browser's own scroll to the focused element, which would cut ours short */
-    focusFrame = requestAnimationFrame(() => scrollToY(target, !storyStore.getState().reducedMotion));
+    focusFrame = 0;
+    /* focus coming back from the hover card is not the reader moving on */
+    const from = e instanceof FocusEvent ? e.relatedTarget : null;
+    if (!(from instanceof Element && from.closest(CARD_PANEL))) focusFrame = requestAnimationFrame(followFocus);
   };
   /* rotation or a window resize: re-measure, then keep the same beat in place */
   const onResize = (): void => {
