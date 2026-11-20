@@ -16,3 +16,16 @@ export function isWebGLAvailable(createCanvas: () => CanvasLike = defaultCanvas)
     return false;
   }
 }
+
+/** What the stage area shows: nothing yet, the 3D stage, or the copy-only fallback. */
+export type StageMode = "pending" | "stage" | "copy";
+
+/**
+ * `support` is null until the browser has been asked (on the server and during hydration). Until
+ * then nothing renders: the copy-only fallback would mark the train arrived before the real one
+ * exists. Without WebGL, or once the context is lost, the story runs copy-only.
+ */
+export function stageMode(support: boolean | null, lost: boolean): StageMode {
+  if (support === null) return "pending";
+  return support && !lost ? "stage" : "copy";
+}

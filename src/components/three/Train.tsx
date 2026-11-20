@@ -6,10 +6,10 @@ import { Vector3, type Camera, type CurvePath, type Group } from "three";
 import { useStore } from "zustand";
 import { nearestParam } from "@/lib/geometry/transit";
 import { stationById, type StationId } from "@/lib/metro/route";
-import { arrivalS, retarget, travelU, type Travel } from "@/lib/story/motion";
+import { arrivalS, nextTravel, travelU, type Travel } from "@/lib/story/motion";
 import { storyStore } from "@/lib/story/store";
 import { clamp01 } from "@/lib/story/timeline";
-import { trainScreen, writeTrainArrival, writeTrainPosition } from "@/lib/story/train-screen";
+import { trainScreen, writeTrainArrival, writeTrainPosition, writeTrainReady } from "@/lib/story/train-screen";
 import { storyNowS } from "./clock";
 import { LINE_HEIGHT } from "./map/MetroLine";
 import { mainLinePath } from "./map/mainLine";
@@ -63,18 +63,6 @@ function reportScreen(lead: Group, camera: Camera, size: RootState["size"], v: S
     .project(camera);
   const visible = q.z > -1 && q.z < 1;
   writeTrainPosition(trainScreen, ((q.x + 1) / 2) * size.width, ((1 - q.y) / 2) * size.height, visible);
-}
-
-/**
- * The next trip. The first target after mount, and every target under reduced motion, is a jump
- * (R8): the train never rides in from the start of the line on load. Otherwise a new stop retargets
- * from wherever the train is now. The same stop keeps the current trip (and its arrival time).
- */
-function nextTravel(current: Travel | null, nowS: number, toU: number, length: number, reducedMotion: boolean): Travel {
-  if (current === null) return { from: toU, to: toU, start: nowS, duration: 0 };
-  const moving = nowS < arrivalS(current);
-  if (toU === current.to && !(reducedMotion && moving)) return current;
-  return retarget(current, nowS, toU, length, reducedMotion);
 }
 
 interface CarProps {
@@ -131,7 +119,8 @@ interface TrainProps {
 /**
  * The request, as a two-car train on the main line. It eases between stops (ease-in-out-cubic,
  * 0.9–3s by distance), retargets from where it is when the beat changes mid-trip, and reports its
- * screen position and arrival time through `trainScreen`. It asks for frames only while moving.
+ * screen position and arrival time through `trainScreen`, and marks itself `ready` there while it is
+ * mounted. It asks for frames only while moving.
  */
 export function Train({ station, palette }: TrainProps) {
   const invalidate = useThree((s) => s.invalidate);
@@ -157,6 +146,12 @@ export function Train({ station, palette }: TrainProps) {
     writeTrainArrival(trainScreen, next.duration > 0 ? null : now);
     invalidate();
   }, [targetU, length, reducedMotion, invalidate]);
+
+  /* after the first stop is set: the stage's E2E hooks follow this train from here on */
+  useLayoutEffect(() => {
+    writeTrainReady(trainScreen, true);
+    return () => writeTrainReady(trainScreen, false);
+  }, []);
 
   /* the pill hides while there is no train to point at */
   useEffect(() => () => writeTrainPosition(trainScreen, 0, 0, false), []);

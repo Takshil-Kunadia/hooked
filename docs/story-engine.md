@@ -30,7 +30,7 @@ content/explainers.json          hover-card notes for every name the story shows
 
 **The controller owns scroll.** Each act is a pinned section, `actHeightVh(beats)` tall (100 + 70 per beat), followed by a 40vh breather where the scene plays without copy. `StoryController` measures the pins with `measureStory`, then `positionAt` (`src/lib/story/scroll.ts`) turns `scrollY` into an act, a beat and an `inBreather` flag. It writes copy visibility (`--vis`) and the active beat straight to the DOM, and reports the position to the store. `src/lib/story/pins.ts` holds the pure logic for snapping, key steps and `#act` links; the controller only reads the DOM and calls it.
 
-**The store is the single source of story state:** `actId`, `beat`, `globalIndex`, `fromLater` (the last move went backwards), `enteredAt`, `layout`, `reducedMotion`, and the hovered and pinned card names. The train's own screen position and arrival time are in a second store, `trainScreen` (`src/lib/story/train-screen.ts`), written by `Train.tsx`.
+**The store is the single source of story state:** `actId`, `beat`, `globalIndex`, `fromLater` (the last move went backwards), `enteredAt`, `layout`, `reducedMotion`, and the hovered and pinned card names. The train's own screen position, arrival time and whether it is on the map (`ready`) are in a second store, `trainScreen` (`src/lib/story/train-screen.ts`), written by `Train.tsx`.
 
 **The scene reads the store, not the DOM.** `MetroStage` renders on demand and requests a frame on any store change. `Train` travels to the current beat's station (`motion.ts`), `CameraRig` moves to the beat's `shot` (`camera.ts`), and the init platform reads `cues.ts` to know when the announcement rings and when the tickets take their turns. The departure board reads the same functions, so the 3D scene and the DOM cannot disagree.
 
@@ -74,7 +74,7 @@ A new station or camera shot is a bigger change: stations live in `src/lib/metro
 
 **Reduced motion.** `syncReducedMotion` (`src/lib/story/reduced-motion.ts`) copies `prefers-reduced-motion` into the store as soon as the controller mounts, before the 3D stage loads. With it set, snapping is off, key and rail scrolling jump instead of gliding, and the train and camera cut to their targets.
 
-**No WebGL.** `StageMount` checks `isWebGLAvailable()`. If it fails, if the stage throws (`StageErrorBoundary`), or if the context is lost, it renders `CopyOnly` instead of the canvas. The story still scrolls, snaps and steps; the DOM boards still play, because `followBeatArrival` (`copy-only.ts`) treats the train as arriving the moment each beat is entered.
+**No WebGL.** `StageMount` checks `isWebGLAvailable()`. If it fails, if the stage throws (`StageErrorBoundary`), or if the context is lost, it renders `CopyOnly` instead of the canvas. Until the browser has been asked (on the server and during hydration) it renders neither (`stageMode` in `src/lib/webgl/support.ts`), so `CopyOnly` never marks the train arrived on a page that has a real one. The story still scrolls, snaps and steps; the DOM boards still play, because `followBeatArrival` (`copy-only.ts`) treats the train as arriving the moment each beat is entered.
 
 ## Scroll behaviour
 
@@ -89,6 +89,6 @@ These are covered by `tests/e2e/story.spec.ts`.
 ## Debugging
 
 - **`?snap=off`** turns off scroll snapping, so you can sit between beats and inspect the copy fade and the camera.
-- **`data-beat` and `data-train`** are written on the fixed stage container (`StageMount`) straight from the stores: `data-beat="<act>/<beat>"` (for example `init/2`) and `data-train="travelling" | "arrived"`. Inspect them to see what the engine thinks, or wait on them in a test.
+- **`data-beat` and `data-train`** are written on the fixed stage container (`StageMount`, `[data-stage]`) straight from the stores, once the 3D train is on the map (`stageData` in `train-screen.ts`): `data-beat="<act>/<beat>"` (for example `init/2`) and `data-train="travelling" | "arrived"`. Inspect them to see what the engine thinks, or wait on them in a test: a test that waits on them always sees the real train.
 - **`pnpm build && pnpm test:e2e`** runs the Playwright suite against a production build: the story at several viewports, keys, resize, reload, deep link, reduced motion, accessibility, and the no-WebGL and lost-context fallbacks (`tests/e2e/fallbacks.spec.ts`).
 - **Unit tests first.** Most of the engine is pure and tested next to its module in `src/lib/story/`. A scroll or camera bug usually reproduces there with plain numbers.

@@ -12,11 +12,13 @@ export interface TrainScreen {
   readonly visible: boolean;
   /** When the train reached its current stop (performance.now() / 1000); null while it travels. */
   readonly arrivedAtS: number | null;
+  /** True while the 3D train is on the map and has reported its first stop. */
+  readonly ready: boolean;
 }
 
 export type TrainScreenStore = StoreApi<TrainScreen>;
 
-const INITIAL: TrainScreen = { x: 0, y: 0, visible: false, arrivedAtS: null };
+const INITIAL: TrainScreen = { x: 0, y: 0, visible: false, arrivedAtS: null, ready: false };
 
 export function createTrainScreen(initial: Partial<TrainScreen> = {}): TrainScreenStore {
   return createStore<TrainScreen>()(() => ({ ...INITIAL, ...initial }));
@@ -30,6 +32,29 @@ export function writeTrainPosition(store: TrainScreenStore, x: number, y: number
 
 export function writeTrainArrival(store: TrainScreenStore, arrivedAtS: number | null): void {
   if (store.getState().arrivedAtS !== arrivedAtS) store.setState({ arrivedAtS });
+}
+
+/** The 3D train mounted (and reported its first stop), or left the map with the stage. */
+export function writeTrainReady(store: TrainScreenStore, ready: boolean): void {
+  if (store.getState().ready !== ready) store.setState({ ready });
+}
+
+/** What the stage wrapper's E2E hooks say: `data-beat` and `data-train`. */
+export interface StageData {
+  readonly beat: string;
+  readonly train: "travelling" | "arrived";
+}
+
+/**
+ * The stage's E2E hooks, or null (no attributes) until the 3D train is on the map, so a test that
+ * waits on them always observes the real train, never a stand-in.
+ */
+export function stageData(
+  story: { readonly actId: string; readonly beat: number },
+  train: Pick<TrainScreen, "arrivedAtS" | "ready">,
+): StageData | null {
+  if (!train.ready) return null;
+  return { beat: `${story.actId}/${story.beat}`, train: train.arrivedAtS === null ? "travelling" : "arrived" };
 }
 
 /** The app-wide train screen. */

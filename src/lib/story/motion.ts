@@ -41,6 +41,25 @@ export function retarget(t: Travel, nowS: number, toU: number, lineLength: numbe
 export const arrivalS = (t: Travel): number => t.start + t.duration;
 
 /**
+ * The train's next trip toward the stop at `toU`. The first target after mount (`current` null),
+ * and every new target under reduced motion, is a jump (R8): the train never rides in from the
+ * start of the line on load. Otherwise a new stop retargets from wherever the train is now. The same
+ * stop keeps the current trip and its arrival time, unless reduced motion has to cut a ride short.
+ */
+export function nextTravel(
+  current: Travel | null,
+  nowS: number,
+  toU: number,
+  lineLength: number,
+  reducedMotion: boolean,
+): Travel {
+  if (current === null) return { from: toU, to: toU, start: nowS, duration: 0 };
+  const moving = nowS < arrivalS(current);
+  if (toU === current.to && !(reducedMotion && moving)) return current;
+  return retarget(current, nowS, toU, lineLength, reducedMotion);
+}
+
+/**
  * Where ticket `index` is in the cascade, `sinceArrivalS` seconds after the train
  * arrived (null while it is still travelling). Arriving from a later beat shows
  * every ticket already done.

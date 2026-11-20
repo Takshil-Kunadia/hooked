@@ -124,7 +124,7 @@ function startPicking(canvas: HTMLCanvasElement, camera: Camera, scene: Scene): 
  * the stage, so the copy layer decides what the scene can hear: full-viewport copy layers must be
  * `pointer-events: none`, with `auto` on the copy column, boards, rail and cards. Clicks on the
  * canvas belong to picking: a hit pins its card, a miss unpins, so a document-level "click outside
- * closes the card" handler should skip events whose target is inside the stage (`[data-train]`).
+ * closes the card" handler should skip events whose target is inside the stage (`[data-stage]`).
  *
  * Hover follows mouse and pen only (touch has no hover); a tap pins. Hover picks are coalesced to
  * one per animation frame, and repeated on every rendered frame while the pointer rests on the

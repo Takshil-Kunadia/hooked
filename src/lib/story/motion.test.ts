@@ -5,6 +5,7 @@ import {
   TWEEN,
   announced,
   arrivalS,
+  nextTravel,
   retarget,
   ticketPhase,
   travelU,
@@ -66,6 +67,38 @@ describe("retarget", () => {
     const next = retarget(t, 1, 40, 200, true);
     expect(next.duration).toBe(0);
     expect(travelU(next, 1)).toBe(40);
+  });
+});
+
+describe("nextTravel", () => {
+  const LENGTH = 200;
+  const trip: Travel = { from: 0.1, to: 0.5, start: 10, duration: 2 };
+
+  it("jumps to the first stop after mount, so the train never rides in on load (R8)", () => {
+    for (const reduced of [false, true]) {
+      expect(nextTravel(null, 3, 0.4, LENGTH, reduced)).toEqual({ from: 0.4, to: 0.4, start: 3, duration: 0 });
+    }
+  });
+
+  it("keeps the current trip, and its arrival time, when the stop is the same", () => {
+    expect(nextTravel(trip, 11, 0.5, LENGTH, false)).toBe(trip);
+    expect(nextTravel(trip, 30, 0.5, LENGTH, true)).toBe(trip);
+  });
+
+  it("rides from wherever the train is now to a new stop", () => {
+    const next = nextTravel(trip, 11, 0.2, LENGTH, false);
+    expect(next.from).toBe(travelU(trip, 11));
+    expect(next).toMatchObject({ to: 0.2, start: 11 });
+    expect(next.duration).toBeGreaterThan(0);
+  });
+
+  it("cuts to a new stop with reduced motion", () => {
+    expect(nextTravel(trip, 13, 0.2, LENGTH, true)).toEqual({ from: 0.5, to: 0.2, start: 13, duration: 0 });
+  });
+
+  it("cuts a trip short when reduced motion turns on mid-ride", () => {
+    const next = nextTravel(trip, 11, 0.5, LENGTH, true);
+    expect(next).toEqual({ from: travelU(trip, 11), to: 0.5, start: 11, duration: 0 });
   });
 });
 
