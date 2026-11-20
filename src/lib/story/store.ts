@@ -16,7 +16,7 @@ export interface StoryState {
   pinned: string | null;
 }
 
-export interface StoryActions {
+interface StoryActions {
   goTo(actId: string, beat: number, globalIndex: number, nowS: number): void;
   setLayout(m: LayoutMode): void;
   setReducedMotion(r: boolean): void;

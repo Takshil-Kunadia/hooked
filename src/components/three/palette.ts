@@ -27,7 +27,7 @@ export interface Palette {
 }
 
 /** Round 5's values, verbatim. Fog distances are for its 52-unit desktop overview (see `fogScale`). */
-export const PALETTES: Readonly<Record<PaletteId, Palette>> = {
+const PALETTES: Readonly<Record<PaletteId, Palette>> = {
   day: {
     bg: "#F5F5F7",
     fogNear: 50,
