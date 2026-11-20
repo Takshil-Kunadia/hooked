@@ -110,3 +110,21 @@ export function ribbonGeometry(path: CurvePath<Vector3>, options: RibbonOptions)
   geometry.computeVertexNormals();
   return geometry;
 }
+
+/**
+ * Where along a path (0..1 by arc length) the point (x, z) is closest.
+ * Sampled, so it is exact to about one sample's spacing.
+ */
+export function nearestParam(path: CurvePath<Vector3>, x: number, z: number, samples = 2400): number {
+  let best = 0;
+  let bestDistance = Infinity;
+  for (let i = 0; i <= samples; i += 1) {
+    const p = path.getPointAt(i / samples);
+    const d = (p.x - x) ** 2 + (p.z - z) ** 2;
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = i;
+    }
+  }
+  return best / samples;
+}
