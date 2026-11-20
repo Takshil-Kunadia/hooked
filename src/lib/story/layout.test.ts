@@ -25,10 +25,21 @@ describe("layoutMode", () => {
 });
 
 describe("LAYOUT_QUERIES", () => {
+  const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+  /** The media query a Tailwind custom variant wraps, in its shorthand or its block form. */
+  const variantQuery = (mode: string): string | undefined =>
+    css
+      .match(new RegExp(`@custom-variant ${mode} (?:\\(@media (.+)\\);|\\{\\s*@media (.+?) \\{\\s*@slot;)`))
+      ?.slice(1)
+      .find(Boolean);
+
   it("css queries match LAYOUT_QUERIES", () => {
-    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    for (const [mode, query] of Object.entries(LAYOUT_QUERIES)) expect(variantQuery(mode)).toBe(query);
+  });
+
+  it("uses the block form for a query list, since Tailwind's shorthand splits on commas", () => {
     for (const [mode, query] of Object.entries(LAYOUT_QUERIES)) {
-      expect(css).toContain(`@custom-variant ${mode} (@media ${query});`);
+      if (query.includes(",")) expect(css).not.toContain(`@custom-variant ${mode} (`);
     }
   });
 });

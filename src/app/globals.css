@@ -71,8 +71,15 @@ body {
   }
 }
 
-/* Layout modes: keep in sync with LAYOUT_QUERIES in src/lib/story/layout.ts (a test checks). */
-@custom-variant stacked (@media (max-width: 760px), (max-width: 1180px) and (orientation: portrait));
+/*
+ * Layout modes: keep in sync with LAYOUT_QUERIES in src/lib/story/layout.ts (a test checks).
+ * stacked is a query list, so it needs the block form: the shorthand splits on its comma.
+ */
+@custom-variant stacked {
+  @media (max-width: 760px), (max-width: 1180px) and (orientation: portrait) {
+    @slot;
+  }
+}
 @custom-variant tablet (@media (min-width: 761px) and (max-width: 1180px) and (orientation: landscape));
 @custom-variant desktop (@media (min-width: 1181px) and (max-width: 1799px));
 @custom-variant wide (@media (min-width: 1800px));
