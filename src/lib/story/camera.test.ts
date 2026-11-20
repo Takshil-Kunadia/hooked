@@ -46,12 +46,25 @@ describe("shotFor framing", () => {
     },
   );
 
-  it.each(VIEWPORTS)("overview fits the whole line at %ix%i", (w, h) => {
-    for (const s of STATIONS) {
-      const p = project([s.x, 0, s.z], "overview", w, h);
-      expect(Math.abs(p.x)).toBeLessThanOrEqual(0.95);
-      expect(Math.abs(p.y)).toBeLessThanOrEqual(0.95);
-    }
+  it.each(VIEWPORTS.filter(([w, h]) => layoutMode(w, h) !== "stacked"))(
+    "overview fits the whole line at %ix%i",
+    (w, h) => {
+      for (const s of STATIONS) {
+        const p = project([s.x, 0, s.z], "overview", w, h);
+        expect(Math.abs(p.x)).toBeLessThanOrEqual(0.95);
+        expect(Math.abs(p.y)).toBeLessThanOrEqual(0.95);
+      }
+    },
+  );
+
+  it("stacked overview stays close and high", () => {
+    expect(CAMERA.stacked.overview.dist).toBeLessThanOrEqual(70);
+    const xs = STATIONS.map((s) => s.x);
+    const mid = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const p = project([mid, 0, 0], "overview", 390, 844);
+    expect(p.y).toBeGreaterThanOrEqual(0);
+    expect(p.y).toBeLessThanOrEqual(0.7);
+    expect(Math.abs(p.x)).toBeLessThan(0.15);
   });
 
   it("does not mutate its inputs", () => {
