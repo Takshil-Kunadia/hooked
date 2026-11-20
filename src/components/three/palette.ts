@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { Color } from "three";
+import { Color, SRGBColorSpace } from "three";
 import { toneCompensate } from "@/lib/design/tone";
 
 type PaletteId = "day" | "dusk";
@@ -82,15 +82,25 @@ export function fogScale(overviewDist: number): number {
  * The colour to give three.js so that, after the output pass tone-maps it, it shows as `hex`
  * exactly. Used for the background (to match the page) and the ink printed on the map.
  */
-export function toneCompensated(hex: string): Color {
+export function toneCompensated(hex: string, ceiling = Infinity): Color {
   const goal = new Color(hex);
-  const [r, g, b] = toneCompensate([goal.r, goal.g, goal.b]);
+  const [r, g, b] = toneCompensate([goal.r, goal.g, goal.b], ceiling);
   return new Color(r, g, b);
 }
 
-/** `toneCompensated` as a CSS colour, for drawing on a 2D canvas that becomes an sRGB texture. */
-export function toneCompensatedCss(hex: string): string {
-  return `#${toneCompensated(hex).getHexString()}`;
+/** A canvas channel can't go above 1, so canvas colours are compensated within that. */
+const CANVAS_CEILING = 1;
+
+/**
+ * `toneCompensated` as a CSS colour, for drawing on a 2D canvas that becomes an sRGB texture.
+ * With an `alpha` below 1 it is an `rgba()` colour.
+ */
+export function toneCompensatedCss(hex: string, alpha = 1): string {
+  const colour = toneCompensated(hex, CANVAS_CEILING);
+  if (alpha >= 1) return `#${colour.getHexString()}`;
+  const { r, g, b } = colour.getRGB({ r: 0, g: 0, b: 0 }, SRGBColorSpace);
+  const byte = (v: number): number => Math.round(Math.min(1, Math.max(0, v)) * 255);
+  return `rgba(${byte(r)}, ${byte(g)}, ${byte(b)}, ${alpha})`;
 }
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";

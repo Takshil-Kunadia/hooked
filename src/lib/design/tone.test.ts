@@ -52,6 +52,17 @@ describe("toneCompensate", () => {
     out.forEach((c, i) => expect(c).toBeCloseTo(goal[i]!, 4));
   });
 
+  it("stays within a ceiling, keeping the hue when a channel can't reach its goal", () => {
+    /* the core origin colour needs blue above 1, which a canvas can't hold */
+    const goal = linear("#8FA8FF");
+    const input = toneCompensate(goal, 1);
+    input.forEach((c) => expect(c).toBeLessThanOrEqual(1));
+    const [r, g, b] = neutralToneMap(input);
+    expect(r).toBeCloseTo(goal[0], 3);
+    expect(g).toBeCloseTo(goal[1], 3);
+    expect(b).toBeGreaterThan(0.85);
+  });
+
   it("never returns a negative channel", () => {
     expect(Math.min(...toneCompensate([0, 0.001, 0.2]))).toBeGreaterThanOrEqual(0);
   });
