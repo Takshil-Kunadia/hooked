@@ -63,8 +63,8 @@
     {
       "name": "muplugins_loaded",
       "kind": "hook",
-      "summary": "Fires once the must-use plugins, the ones that always run, have loaded. Regular plugins haven't loaded yet, so only a must-use plugin can listen for it.",
-      "example": "// only works from a file in wp-content/mu-plugins/\nadd_action( 'muplugins_loaded', 'my_early_setup' );"
+      "summary": "Fires once the must-use plugins, the ones that always run, have loaded. Regular plugins haven't loaded yet, so only code that loads this early, like a must-use plugin or a drop-in, can listen for it.",
+      "example": "// from code that loads this early, like a must-use plugin in wp-content/mu-plugins/\nadd_action( 'muplugins_loaded', 'my_early_setup' );"
     },
     {
       "name": "plugins_loaded",
