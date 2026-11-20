@@ -101,7 +101,10 @@ export function CameraRig({ beat, layout }: CameraRigProps) {
   const aspect = sized ? width / height : 1;
   const shotId = beat?.shot ?? "overview";
   const station = beat?.station ?? "browser";
-  const shot = useMemo(() => shotFor(subjectFor(shotId, station), layout, aspect), [shotId, station, layout, aspect]);
+  const shot = useMemo(
+    () => shotFor(subjectFor(shotId, station, layout), layout, aspect, shotId),
+    [shotId, station, layout, aspect],
+  );
   const rig = useRef<Rig | null>(null);
 
   useLayoutEffect(() => {

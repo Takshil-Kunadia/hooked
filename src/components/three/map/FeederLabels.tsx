@@ -2,15 +2,12 @@
 
 import { useMemo } from "react";
 import { labelRows } from "@/lib/metro/label-rows";
+import { FEEDER_LABEL_END_OFFSET, FEEDER_LABEL_ROW_STEP } from "@/lib/metro/feeder-labels";
 import { FEEDER_LINES, type Origin } from "@/lib/metro/route";
 import { MapLabel } from "./MapLabel";
 import { LABEL_WORLD_WIDTH, labelHalfWidthFraction, type LabelStyle } from "./labels";
 
-/** Round 5's feeder labels sit 1.2 past the line's outer end, at 0.78 size. */
 const SIZE = 0.78;
-const END_OFFSET = 1.2;
-/** Labels that would collide move one row further out (neighbours in the row). */
-const ROW_STEP = 1.15;
 const ROW_GAP = 0.25;
 
 const TITLES: Readonly<Record<Origin, string>> = {
@@ -49,7 +46,7 @@ function feederLabels(fonts: LabelStyle["fonts"]): FeederLabel[] {
     origin,
     title: TITLES[origin],
     x: start[0],
-    z: start[1] + END_OFFSET + (rows[i] ?? 0) * ROW_STEP,
+    z: start[1] + FEEDER_LABEL_END_OFFSET + (rows[i] ?? 0) * FEEDER_LABEL_ROW_STEP,
   }));
 }
 
