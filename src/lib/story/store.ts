@@ -47,7 +47,7 @@ export function createStoryStore(initial: Partial<StoryState> = {}): StoryStore 
         actId,
         beat,
         globalIndex,
-        fromLater: globalIndex < s.globalIndex,
+        fromLater: globalIndex === s.globalIndex ? s.fromLater : globalIndex < s.globalIndex,
         enteredAt: actId !== s.actId || beat !== s.beat ? nowS : s.enteredAt,
       })),
     setLayout: (layout) => set({ layout }),

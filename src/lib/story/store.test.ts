@@ -38,6 +38,15 @@ describe("story store", () => {
     expect(s.getState().fromLater).toBe(false);
   });
 
+  it("keeps fromLater and enteredAt when the same beat is re-asserted", () => {
+    const s = createStoryStore();
+    s.getState().goTo("init", 1, 5, 1);
+    s.getState().goTo("init", 0, 4, 2);
+    s.getState().goTo("init", 0, 4, 3);
+    expect(s.getState().fromLater).toBe(true);
+    expect(s.getState().enteredAt).toBe(2);
+  });
+
   it("ignores hover while a card is pinned", () => {
     const s = createStoryStore();
     s.getState().hover("a");
