@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CanvasTexture, SRGBColorSpace } from "three";
+import { subLabelText } from "@/lib/metro/label-text";
 
 /** Labels lean back 0.6 rad from the floor, towards the camera (round 5's TILT). */
 export const TILT = 0.6;
@@ -59,7 +60,7 @@ function drawLabel(g: CanvasRenderingContext2D, title: string, sub: string, styl
   if (sub) {
     g.fillStyle = style.muted;
     g.font = subFont(style.fonts);
-    g.fillText(sub.toUpperCase(), cx, SUB_BASELINE);
+    g.fillText(subLabelText(sub), cx, SUB_BASELINE);
   }
 }
 
@@ -89,7 +90,7 @@ export function labelHalfWidthFraction(title: string, sub: string, fonts: LabelF
   measurer.font = titleFont(title, fonts);
   const titleW = measurer.measureText(title).width;
   measurer.font = subFont(fonts);
-  const subW = sub ? measurer.measureText(sub.toUpperCase()).width : 0;
+  const subW = sub ? measurer.measureText(subLabelText(sub)).width : 0;
   return Math.max(titleW, subW) / CANVAS_W / 2;
 }
 
