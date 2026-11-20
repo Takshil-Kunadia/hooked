@@ -34,6 +34,15 @@ describe("map data", () => {
     });
   });
 
+  it("Stop 0 leaves room for the two-car train (R15)", () => {
+    const browser = stationById("browser");
+    const server = stationById("server");
+    const php = stationById("php");
+    expect(Math.hypot(server.x - browser.x, server.z - browser.z)).toBeGreaterThanOrEqual(4.5);
+    expect(Math.hypot(php.x - server.x, php.z - server.z)).toBeGreaterThanOrEqual(4.5);
+    expect(MAIN_LINE.points[0]).toEqual([browser.x, browser.z]);
+  });
+
   it("ids are unique and found by stationById", () => {
     expect(new Set(STATIONS.map((s) => s.id)).size).toBe(STATIONS.length);
     expect(stationById("init").title).toBe("init");
