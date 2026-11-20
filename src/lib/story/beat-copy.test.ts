@@ -9,6 +9,7 @@ const DATA: StoryData = {
   status: 200,
   tickets: { shown: [], hidden: 0, all: [] },
   bootAnnouncements: [],
+  bootActionsFired: 36,
   sources: {},
 };
 

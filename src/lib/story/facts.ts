@@ -57,6 +57,16 @@ export function firedOrder(trace: TraceFile, names: ReadonlyArray<string>): stri
   return firstFiredOrder(trace, names);
 }
 
+/**
+ * How many distinct action hooks fire from the start of the request up to and including
+ * `after_setup_theme`: the boot announcements the board picks four of.
+ */
+export function bootActionsFired(trace: TraceFile): number {
+  const boundary = trace.hooks.find((h) => h.name === "after_setup_theme");
+  if (!boundary) throw new Error('The trace has no "after_setup_theme" hook to count the boot actions up to');
+  return trace.hooks.filter((h) => h.type === "action" && h.firstIndex <= boundary.firstIndex).length;
+}
+
 export interface HookSource {
   readonly type: "action" | "filter";
   readonly file: string;
@@ -86,6 +96,8 @@ export interface StoryData {
   readonly status: number;
   readonly tickets: Tickets;
   readonly bootAnnouncements: string[];
+  /** All the actions fired up to after_setup_theme, of which bootAnnouncements are a selection. */
+  readonly bootActionsFired: number;
   /** Where core fires each hook "Under the hood" lists, in the order the hooks first fired. */
   readonly sources: Readonly<Record<string, { file: string; line: number; url: string }>>;
 }

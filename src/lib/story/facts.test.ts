@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { normalizeListeners, type RawListener } from "@/lib/wp-data/trace";
 import { traceFileSchema } from "@/lib/wp-data/schema";
-import { docsUrl, firedOrder, hookSource, initTickets, sourceUrl } from "./facts";
+import { bootActionsFired, docsUrl, firedOrder, hookSource, initTickets, sourceUrl } from "./facts";
 
 const raw: RawListener[] = [
   ["core_a", 0, 1, "wp-includes/a.php"],
@@ -91,5 +91,18 @@ describe("trace facts", () => {
       "theme",
       "theme",
     ]);
+  });
+
+  it("counts the actions fired up to after_setup_theme from the real trace", () => {
+    const count = bootActionsFired(trace);
+    const first = trace.hooks.find((h) => h.name === "after_setup_theme")!.firstIndex;
+    const expected = trace.hooks.filter((h) => h.type === "action" && h.firstIndex <= first).length;
+    expect(count).toBe(expected);
+    expect(count).toBe(36);
+    expect(count).toBeGreaterThanOrEqual(4);
+  });
+
+  it("throws when the boundary hook never fired", () => {
+    expect(() => bootActionsFired({ ...trace, hooks: [] })).toThrow(/after_setup_theme/);
   });
 });

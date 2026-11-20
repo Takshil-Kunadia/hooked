@@ -2,7 +2,7 @@ import "server-only";
 import path from "node:path";
 import { readIndex, readMeta, readTrace } from "@/lib/wp-data/files";
 import { normalizeListeners } from "@/lib/wp-data/trace";
-import { firedOrder, hookSource, initTickets, sourceUrl, type StoryData } from "./facts";
+import { bootActionsFired, firedOrder, hookSource, initTickets, sourceUrl, type StoryData } from "./facts";
 
 const CONTENT_ROOT = path.join(process.cwd(), "content", "versions");
 const SCENARIO = "block-single";
@@ -35,6 +35,7 @@ export async function getStoryData(): Promise<StoryData> {
     status: trace.status,
     tickets: initTickets(normalizeListeners(trace.listeners["init"] ?? [])),
     bootAnnouncements: firedOrder(trace, BOOT_HOOKS),
+    bootActionsFired: bootActionsFired(trace),
     sources,
   };
 }
