@@ -63,8 +63,8 @@ export const CHAPTER_1_COPY: Readonly<Record<string, BeatCopy>> = {
       <b>
         <Hook name="wp-blog-header.php" /> loads <Hook name="wp-load.php" />,
       </b>{" "}
-      which finds <Hook name="wp-config.php" /> in its own folder or the one above. It holds your database login and the
-      site&apos;s settings.
+      which finds <Hook name="wp-config.php" /> in its own folder or the one above. It holds your database login and a
+      few site-wide switches, such as <code>WP_DEBUG</code>.
     </>
   ),
   settings: (
@@ -72,14 +72,14 @@ export const CHAPTER_1_COPY: Readonly<Record<string, BeatCopy>> = {
       <b>
         <Hook name="wp-config.php" /> hands over to <Hook name="wp-settings.php" />.
       </b>{" "}
-      Early on, it loads the hook system, which lets plugins join in: <Hook name="plugin.php" /> and{" "}
-      <Hook name="class-wp-hook.php" />. Then drop-ins, optional files that replace part of WordPress, such as its
-      cache.
+      Early on, it loads the hook system that lets plugins join in: <Hook name="plugin.php" /> and{" "}
+      <Hook name="class-wp-hook.php" />. Along the way, drop-ins: optional files that swap out part of WordPress, like
+      its cache.
     </>
   ),
   feeders: (
     <>
-      <b>Plugins and the theme board here.</b> Must-use (always-on) plugins, then WordPress announces{" "}
+      <b>Plugins and the theme join here.</b> Must-use (always-on) plugins, then WordPress announces{" "}
       <Hook name="muplugins_loaded" />. Your plugins, then <Hook name="plugins_loaded" />. Then{" "}
       <Hook name="setup_theme" />, the theme&apos;s <Hook name="functions.php" /> (child theme first) and{" "}
       <Hook name="after_setup_theme" />.
@@ -92,7 +92,7 @@ export const CHAPTER_1_COPY: Readonly<Record<string, BeatCopy>> = {
       <b>
         The train pulls into <Hook name="init" />.
       </b>{" "}
-      Your plugins and theme are loaded, and WordPress has set up the current user, so it knows who&apos;s visiting.
+      Your plugins and theme are loaded, and WordPress has checked who&apos;s visiting: a logged-in user, or a guest.
     </>
   ),
   announce: (

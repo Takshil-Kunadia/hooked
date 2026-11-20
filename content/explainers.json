@@ -23,7 +23,7 @@
     {
       "name": "index.php",
       "kind": "file",
-      "summary": "WordPress's front door: visits to your site's pages start here. The file is tiny; it switches on the theme and loads wp-blog-header.php."
+      "summary": "WordPress's front door: visits to your site's pages start here. The file is tiny: it asks for the page to be drawn with the theme (WP_USE_THEMES) and loads wp-blog-header.php."
     },
     {
       "name": "wp-blog-header.php",
@@ -63,8 +63,8 @@
     {
       "name": "muplugins_loaded",
       "kind": "hook",
-      "summary": "Fires once the must-use plugins, the ones that always run, have loaded. Regular plugins haven't loaded yet.",
-      "example": "add_action( 'muplugins_loaded', 'my_early_setup' );"
+      "summary": "Fires once the must-use plugins, the ones that always run, have loaded. Regular plugins haven't loaded yet, so only a must-use plugin can listen for it.",
+      "example": "// only works from a file in wp-content/mu-plugins/\nadd_action( 'muplugins_loaded', 'my_early_setup' );"
     },
     {
       "name": "plugins_loaded",
@@ -98,7 +98,7 @@
       "name": "do_action",
       "kind": "function",
       "summary": "Fires an action: it calls every function signed up for that hook, lowest priority first. It hands nothing back.",
-      "example": "do_action( 'init' );"
+      "example": "// how WordPress itself fires init; you add_action() to listen, not do_action()\ndo_action( 'init' );"
     },
     {
       "name": "add_action",
