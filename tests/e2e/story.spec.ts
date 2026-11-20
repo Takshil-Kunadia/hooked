@@ -44,11 +44,12 @@ test.describe("the story", () => {
         const visible = await page.evaluate(async (top) => {
           window.scrollTo(0, top);
           await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          /* off-screen copy is clipped out of sight (sr-only), not hidden, so judge by the clip and --vis */
           return [...document.querySelectorAll<HTMLElement>("[data-copy]")].filter((el) => {
             const rect = el.getBoundingClientRect();
-            const style = getComputedStyle(el);
+            const clipped = getComputedStyle(el).clipPath !== "none";
             const pinVis = Number(el.closest<HTMLElement>("[data-pin]")?.style.getPropertyValue("--vis") ?? "1");
-            return style.visibility !== "hidden" && pinVis > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+            return !clipped && pinVis > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
           }).length;
         }, y);
         expect(visible, `visible copy blocks at scrollY ${y}`).toBeLessThanOrEqual(1);
@@ -86,6 +87,21 @@ test.describe("the story", () => {
     await page.keyboard.press("Space");
     await expect(details).not.toHaveAttribute("open", "");
     await expect(stage(page)).toHaveAttribute("data-beat", "boot/0");
+  });
+
+  test("arrow keys step after a click on a rail button", async ({ page }, testInfo) => {
+    onlyDesktop(testInfo);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openAct(page, "boot");
+    const rail = page.getByRole("navigation", { name: "Story steps" }).getByRole("button");
+    const tick = rail.nth(BEATS.indexOf("boot/1"));
+    await tick.click();
+    await expect(stage(page)).toHaveAttribute("data-beat", "boot/1", { timeout: 30_000 });
+    /* Chrome focuses a clicked button; the arrows must still step, not scroll a little and snap back */
+    await expect(tick).toBeFocused();
+    await stepTo(page, "boot/2");
+    await page.keyboard.press("ArrowUp");
+    await expect(stage(page)).toHaveAttribute("data-beat", "boot/1", { timeout: 30_000 });
   });
 
   test("keeps the beat across a resize", async ({ page }, testInfo) => {
