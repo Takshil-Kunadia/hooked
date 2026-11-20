@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "three";
-import { buildTransitPath, ribbonGeometry, roundedBarProfile } from "./transit";
+import { buildTransitPath, nearestParam, ribbonGeometry, roundedBarProfile } from "./transit";
 
 describe("roundedBarProfile", () => {
   const profile = roundedBarProfile({ width: 0.5, height: 0.12, radius: 0.06, arcSegments: 6 });
@@ -107,5 +107,24 @@ describe("input guards", () => {
 
   it("rejects a path whose points all coincide", () => {
     expect(() => buildTransitPath([new Vector3(1, 0, 1), new Vector3(1, 0, 1)], 1)).toThrow(/at least two points/);
+  });
+});
+
+describe("nearestParam", () => {
+  const straight = buildTransitPath([new Vector3(0, 0, 0), new Vector3(10, 0, 0)], 1);
+  it("returns 0, 0.5 and 1 along a straight path", () => {
+    expect(nearestParam(straight, 0, 0)).toBeCloseTo(0, 3);
+    expect(nearestParam(straight, 5, 1)).toBeCloseTo(0.5, 3);
+    expect(nearestParam(straight, 10, 0)).toBeCloseTo(1, 3);
+  });
+  it("is monotonic along a bent path", () => {
+    const bent = buildTransitPath([new Vector3(0, 0, 0), new Vector3(5, 0, 0), new Vector3(8, 0, 3)], 1);
+    let last = -1;
+    for (let i = 0; i <= 20; i += 1) {
+      const p = bent.getPointAt(i / 20);
+      const u = nearestParam(bent, p.x, p.z);
+      expect(u).toBeGreaterThanOrEqual(last);
+      last = u;
+    }
   });
 });
