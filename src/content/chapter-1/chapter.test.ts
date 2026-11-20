@@ -203,6 +203,13 @@ describe("Explainers", () => {
     }
   });
 
+  it("never say only a must-use plugin can hear muplugins_loaded: drop-ins load earlier still", () => {
+    const e = explainers.get("muplugins_loaded");
+    const text = `${e?.summary ?? ""}\n${e?.example ?? ""}`;
+    expect(e?.summary).toMatch(/drop-in/);
+    expect(text).not.toMatch(/only (?:a must-use|works from)/i);
+  });
+
   it("link core functions and hooks to the reference, but never the theme's functions or the demo", () => {
     const cards = storyCards(explainers, data.tickets.shown, "init");
     for (const t of data.tickets.shown) {
