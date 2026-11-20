@@ -9,7 +9,7 @@ import { avoidRects } from "./dom";
 
 const CARD = "[data-card]";
 /** The stage container: clicks there belong to 3D picking (a hit pins, a miss unpins). */
-const STAGE = "[data-train]";
+const STAGE = "[data-stage]";
 const FOCUSABLE = "a[href], button";
 /** A card opened from the 3D scene sits this far from the pointer. */
 const POINTER_OFFSET = 8;
