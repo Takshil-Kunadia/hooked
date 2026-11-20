@@ -2,8 +2,10 @@ import {
   BufferGeometry,
   CurvePath,
   Float32BufferAttribute,
+  LatheGeometry,
   LineCurve3,
   QuadraticBezierCurve3,
+  Vector2,
   type Vector3,
 } from "three";
 
@@ -68,6 +70,20 @@ export function buildTransitPath(input: ReadonlyArray<Vector3>, cornerRadius: nu
   return path;
 }
 
+/**
+ * Copies the points with the first one moved back `by` units along the first segment.
+ * The scene uses it so a marker at the very start of a line sits on the line, not past its end.
+ */
+export function extendStart(points: ReadonlyArray<Vector3>, by: number): Vector3[] {
+  const [first, second] = points;
+  if (!first || !second) throw new RangeError("extendStart() needs at least two points");
+  if (!(by >= 0)) throw new RangeError("extendStart() needs a length of 0 or more");
+  const back = first.clone().sub(second);
+  if (back.lengthSq() < 1e-12) throw new RangeError("extendStart() needs a first segment with a length");
+  const start = first.clone().addScaledVector(back.normalize(), by);
+  return [start, ...points.slice(1).map((p) => p.clone())];
+}
+
 export interface RibbonOptions {
   readonly width: number;
   readonly height: number;
@@ -109,6 +125,27 @@ export function ribbonGeometry(path: CurvePath<Vector3>, options: RibbonOptions)
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
+}
+
+export interface EndCapOptions {
+  readonly width: number;
+  readonly height: number;
+  readonly arcSegments?: number;
+  readonly cornerRadius?: number;
+  readonly radialSegments?: number;
+}
+
+/**
+ * A rounded end cap for a ribbon: the right half of the bar profile turned half a revolution,
+ * so it bulges towards +x only and never overlaps the ribbon it closes.
+ */
+export function endCapGeometry(options: EndCapOptions): LatheGeometry {
+  const { width, height, arcSegments = 7, cornerRadius = 0.07, radialSegments = 28 } = options;
+  const profile = roundedBarProfile({ width, height, radius: cornerRadius, arcSegments });
+  /* LatheGeometry wants its outline from bottom to top, or its normals point inwards */
+  const rightHalf = profile.filter(([x]) => x > 0).reverse();
+  const outline = [...rightHalf.map(([x, y]) => new Vector2(x, y)), new Vector2(0, height)];
+  return new LatheGeometry(outline, radialSegments, 0, Math.PI);
 }
 
 /**

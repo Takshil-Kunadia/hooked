@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flattenBeats, validateChapter, type BeatSpec, type ChapterSpec } from "./chapter";
+import { findBeat, flattenBeats, validateChapter, type BeatSpec, type ChapterSpec } from "./chapter";
 
 const beat = (over: Partial<BeatSpec> & Pick<BeatSpec, "id">): BeatSpec => ({
   rail: "Rail",
@@ -113,5 +113,19 @@ describe("flattenBeats", () => {
       ["init", 1, 0, 2, "announce"],
       ["init", 1, 1, 3, "tickets"],
     ]);
+  });
+});
+
+describe("findBeat", () => {
+  const flat = flattenBeats(valid);
+
+  it("finds a beat by act and position in the act", () => {
+    expect(findBeat(flat, "init", 1)?.spec.id).toBe("tickets");
+    expect(findBeat(flat, "boot", 0)?.globalIndex).toBe(0);
+  });
+
+  it("returns undefined for an unknown act or beat", () => {
+    expect(findBeat(flat, "hero", 0)).toBeUndefined();
+    expect(findBeat(flat, "init", 2)).toBeUndefined();
   });
 });

@@ -51,6 +51,11 @@ export function flattenBeats(spec: ChapterSpec): ReadonlyArray<FlatBeat> {
   return flat;
 }
 
+/** The flattened beat at `beat` within act `actId`, if the chapter has one. */
+export function findBeat(flat: ReadonlyArray<FlatBeat>, actId: string, beat: number): FlatBeat | undefined {
+  return flat.find((b) => b.actId === actId && b.beat === beat);
+}
+
 const stationIndex = (id: StationId): number => STATIONS.findIndex((s) => s.id === id);
 
 function actIssues(spec: ChapterSpec): ChapterIssue[] {
