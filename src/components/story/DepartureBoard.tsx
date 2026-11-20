@@ -87,14 +87,16 @@ function InitBoard({ cues, tickets, hidden }: InitBoardProps) {
   );
 }
 
-/** The announcements wp-settings.php has made so far, in the order they fired. */
-function AnnouncementBoard({ names }: { readonly names: ReadonlyArray<string> }) {
+/** A selection of the announcements wp-settings.php makes while booting, in the order they fire. */
+function AnnouncementBoard({ names, total }: { readonly names: ReadonlyArray<string>; readonly total: number }) {
   const titleId = useId();
   return (
     <div className="board" role="group" aria-labelledby={titleId} data-card-avoid="">
       <p className="board-title">
         <span id={titleId}>Station announcements</span>
-        <span>{names.length} so far</span>
+        <span>
+          {names.length} of {total}
+        </span>
       </p>
       <table>
         <thead>
@@ -125,15 +127,24 @@ interface DepartureBoardProps {
   readonly tickets: ReadonlyArray<Ticket>;
   readonly hidden: number;
   readonly announcements: ReadonlyArray<string>;
+  /** Every action fired during boot, of which `announcements` are a selection. */
+  readonly announcementsTotal: number;
 }
 
 /**
  * The act's departure board, shown at the beats that ask for one. It lives inside the act's copy, so
  * it fades with it: bottom-right of the pin on wider layouts, inside the frosted sheet when stacked.
  */
-export function DepartureBoard({ beats, cues, tickets, hidden, announcements }: DepartureBoardProps) {
+export function DepartureBoard({
+  beats,
+  cues,
+  tickets,
+  hidden,
+  announcements,
+  announcementsTotal,
+}: DepartureBoardProps) {
   const kind = useStore(storyStore, (s) => beats.find((b) => b.index === s.globalIndex)?.kind);
-  if (kind === "announcements") return <AnnouncementBoard names={announcements} />;
+  if (kind === "announcements") return <AnnouncementBoard names={announcements} total={announcementsTotal} />;
   if (kind === "init") return <InitBoard cues={cues} tickets={tickets} hidden={hidden} />;
   return null;
 }

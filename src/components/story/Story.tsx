@@ -70,6 +70,7 @@ export function Story({ spec, copy, data, explainers }: StoryProps) {
                   tickets={data.tickets.shown}
                   hidden={data.tickets.hidden}
                   announcements={data.bootAnnouncements}
+                  announcementsTotal={data.bootActionsFired}
                 />
               )}
             </Act>
