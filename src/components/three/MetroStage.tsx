@@ -1,94 +1,117 @@
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useMemo } from "react";
-import { NeutralToneMapping, Vector3 } from "three";
-import { LINE_COLOURS, ORIGIN_COLOURS } from "@/lib/design/tokens";
-import { buildTransitPath, ribbonGeometry } from "@/lib/geometry/transit";
-import { FEEDER_LINES, MAIN_LINE, type LineSpec } from "@/lib/metro/route";
+import { useEffect, useLayoutEffect, useMemo } from "react";
+import { NeutralToneMapping } from "three";
+import { useStore } from "zustand";
+import { CAMERA, shotFor } from "@/lib/story/camera";
+import { findBeat, flattenBeats, type BeatSpec, type ChapterSpec } from "@/lib/story/chapter";
+import type { LayoutMode } from "@/lib/story/layout";
+import { storyStore } from "@/lib/story/store";
+import { Effects } from "./Effects";
+import { Lighting } from "./Lighting";
+import { MetroMap, OVERVIEW_FOCUS } from "./map/MetroMap";
+import { fogScale, usePalette } from "./palette";
 
-const LINE_HEIGHT = 0.12;
-/** Big enough for crisp shadows across the whole map, without the 64 MB cost of 4096². */
-const SHADOW_MAP_SIZE = 2048;
-const OVERVIEW_POSITION = [3.6, 31.3, 42.4] as const;
-const OVERVIEW_LOOK = [4.2, -6.8, 1] as const;
+const FOV = 30;
+const NEAR = 0.1;
+/** Beyond the farthest fog (the tablet overview's), so the fog, not the far plane, ends the map. */
+const FAR = 200;
+/** The composer's target has MSAA; the canvas itself only receives the output pass. */
+const GL_OPTIONS = {
+  antialias: false,
+  alpha: true,
+  powerPreference: "high-performance",
+  toneMapping: NeutralToneMapping,
+} as const;
+const CAMERA_OPTIONS = { fov: FOV, near: NEAR, far: FAR } as const;
+/** The canvas is fixed, so it needn't re-measure on scroll. */
+const RESIZE_OPTIONS = { scroll: false } as const;
+/** Round 5 caps phones at 1.5× so MSAA ×4 and the post passes stay smooth. */
+const MAX_DPR: Readonly<Record<LayoutMode, number>> = { stacked: 1.5, tablet: 2, desktop: 2, wide: 2 };
 
-function colourFor(spec: LineSpec): string {
-  if (spec.kind === "main") return LINE_COLOURS.main;
-  if (spec.kind === "feeder" && spec.origin) return ORIGIN_COLOURS[spec.origin];
-  return LINE_COLOURS.spur;
+interface OverviewCameraProps {
+  readonly layout: LayoutMode;
 }
 
-interface CameraRigProps {
-  readonly position: readonly [number, number, number];
-  readonly lookAt: readonly [number, number, number];
-}
+/** A still camera on the layout's overview shot; Task 10's CameraRig takes over from here. */
+function OverviewCamera({ layout }: OverviewCameraProps) {
+  const camera = useThree((s) => s.camera);
+  const { width, height } = useThree((s) => s.size);
+  const invalidate = useThree((s) => s.invalidate);
+  const aspect = width > 0 && height > 0 ? width / height : 1;
 
-function CameraRig({ position, lookAt }: CameraRigProps) {
-  const camera = useThree((state) => state.camera);
-  const invalidate = useThree((state) => state.invalidate);
   useLayoutEffect(() => {
-    camera.position.set(...position);
-    camera.lookAt(...lookAt);
+    const shot = shotFor("overview", layout, aspect);
+    camera.position.set(...shot.position);
+    camera.lookAt(...shot.lookAt);
     camera.updateMatrixWorld();
     invalidate();
-  }, [camera, invalidate, position, lookAt]);
+  }, [camera, layout, aspect, invalidate]);
   return null;
 }
 
-interface MetroLineProps {
-  readonly spec: LineSpec;
+/** The chapter's current beat, or null without a chapter (the hero overview). */
+function useCurrentBeat(chapter: ChapterSpec | undefined): BeatSpec | null {
+  const flat = useMemo(() => (chapter ? flattenBeats(chapter) : []), [chapter]);
+  const actId = useStore(storyStore, (s) => s.actId);
+  const beat = useStore(storyStore, (s) => s.beat);
+  return findBeat(flat, actId, beat)?.spec ?? null;
 }
 
-function MetroLine({ spec }: MetroLineProps) {
-  const geometry = useMemo(() => {
-    const path = buildTransitPath(
-      spec.points.map(([x, z]) => new Vector3(x, 0, z)),
-      spec.cornerRadius,
-    );
-    return ribbonGeometry(path, { width: spec.width, height: LINE_HEIGHT, segments: spec.segments });
-  }, [spec]);
-  return (
-    <mesh geometry={geometry} castShadow receiveShadow>
-      <meshPhysicalMaterial color={colourFor(spec)} roughness={0.32} clearcoat={0.5} clearcoatRoughness={0.3} />
-    </mesh>
+/** Requests a frame whenever the story moves or the layout changes (the canvas renders on demand). */
+function useInvalidateOnStory(): void {
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(
+    () =>
+      storyStore.subscribe((s, prev) => {
+        if (s.actId !== prev.actId || s.beat !== prev.beat || s.layout !== prev.layout) invalidate();
+      }),
+    [invalidate],
   );
 }
 
+interface StageSceneProps {
+  readonly chapter?: ChapterSpec;
+}
+
+function StageScene({ chapter }: StageSceneProps) {
+  const palette = usePalette();
+  const layout = useStore(storyStore, (s) => s.layout);
+  const beat = useCurrentBeat(chapter);
+  useInvalidateOnStory();
+
+  return (
+    <>
+      <OverviewCamera layout={layout} />
+      <Lighting palette={palette} fogScale={fogScale(CAMERA[layout].overview.dist)} />
+      <MetroMap focus={beat?.focus ?? OVERVIEW_FOCUS} current={beat?.station ?? null} palette={palette} />
+      <Effects bloom={palette.bloom} ambientOcclusion={layout !== "stacked"} />
+    </>
+  );
+}
+
+interface MetroStageProps {
+  /** The story's chapter; without one the stage shows the hero overview. */
+  readonly chapter?: ChapterSpec;
+}
+
 /**
- * Overview of the metro map. The scene is static for now, so it renders on demand
- * instead of 60 times a second; the story's animations will call invalidate().
+ * The metro map. It renders on demand rather than 60 times a second: the scene requests
+ * a frame when the story, the tile or the viewport changes.
  */
-export default function MetroStage() {
+export default function MetroStage({ chapter }: MetroStageProps) {
+  const layout = useStore(storyStore, (s) => s.layout);
   return (
     <Canvas
       frameloop="demand"
-      shadows
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true, toneMapping: NeutralToneMapping }}
-      camera={{ fov: 30, near: 0.1, far: 200 }}
+      shadows="percentage"
+      dpr={[1, MAX_DPR[layout]]}
+      gl={GL_OPTIONS}
+      camera={CAMERA_OPTIONS}
+      resize={RESIZE_OPTIONS}
     >
-      <CameraRig position={OVERVIEW_POSITION} lookAt={OVERVIEW_LOOK} />
-      <hemisphereLight args={["#ffffff", "#d9d4cc", 0.55]} />
-      <directionalLight
-        position={[-8, 22, 14]}
-        intensity={2.5}
-        castShadow
-        shadow-mapSize={[SHADOW_MAP_SIZE, SHADOW_MAP_SIZE]}
-        shadow-camera-left={-22}
-        shadow-camera-right={28}
-        shadow-camera-top={12}
-        shadow-camera-bottom={-12}
-        shadow-bias={-0.0003}
-      />
-      <mesh rotation-x={-Math.PI / 2} receiveShadow>
-        <planeGeometry args={[240, 240]} />
-        <shadowMaterial opacity={0.16} />
-      </mesh>
-      <MetroLine spec={MAIN_LINE} />
-      {FEEDER_LINES.map((spec) => (
-        <MetroLine key={spec.id} spec={spec} />
-      ))}
+      <StageScene chapter={chapter} />
     </Canvas>
   );
 }

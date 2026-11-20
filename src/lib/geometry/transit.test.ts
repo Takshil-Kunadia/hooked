@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "three";
-import { buildTransitPath, nearestParam, ribbonGeometry, roundedBarProfile } from "./transit";
+import {
+  buildTransitPath,
+  endCapGeometry,
+  extendStart,
+  nearestParam,
+  ribbonGeometry,
+  roundedBarProfile,
+} from "./transit";
 
 describe("roundedBarProfile", () => {
   const profile = roundedBarProfile({ width: 0.5, height: 0.12, radius: 0.06, arcSegments: 6 });
@@ -125,6 +132,69 @@ describe("nearestParam", () => {
       const u = nearestParam(bent, p.x, p.z);
       expect(u).toBeGreaterThanOrEqual(last);
       last = u;
+    }
+  });
+});
+
+describe("extendStart", () => {
+  it("moves the first point back along the first segment", () => {
+    const out = extendStart([new Vector3(-21, 0, -3), new Vector3(-8, 0, -3), new Vector3(-5, 0, 0)], 0.6);
+    expect(out[0]!.x).toBeCloseTo(-21.6, 9);
+    expect(out[0]!.z).toBeCloseTo(-3, 9);
+    expect(out[1]!.toArray()).toEqual([-8, 0, -3]);
+  });
+
+  it("follows a diagonal first segment", () => {
+    const [first] = extendStart([new Vector3(0, 0, 0), new Vector3(3, 0, 4)], 5);
+    expect(first!.x).toBeCloseTo(-3, 9);
+    expect(first!.z).toBeCloseTo(-4, 9);
+  });
+
+  it("returns new vectors and leaves the input alone", () => {
+    const input = [new Vector3(0, 0, 0), new Vector3(1, 0, 0)];
+    const out = extendStart(input, 1);
+    expect(out[0]).not.toBe(input[0]);
+    expect(out[1]).not.toBe(input[1]);
+    expect(input[0]!.toArray()).toEqual([0, 0, 0]);
+  });
+
+  it("rejects fewer than two points or a negative length", () => {
+    expect(() => extendStart([new Vector3()], 1)).toThrow(RangeError);
+    expect(() => extendStart([new Vector3(), new Vector3(1, 0, 0)], -1)).toThrow(RangeError);
+  });
+
+  it("rejects a zero-length first segment", () => {
+    expect(() => extendStart([new Vector3(), new Vector3()], 1)).toThrow(RangeError);
+  });
+});
+
+describe("endCapGeometry", () => {
+  const cap = endCapGeometry({ width: 0.5, height: 0.12 });
+  const position = cap.getAttribute("position");
+
+  it("is a half dome that only bulges towards +x", () => {
+    for (let i = 0; i < position.count; i += 1) expect(position.getX(i)).toBeGreaterThanOrEqual(-1e-9);
+  });
+
+  it("matches the ribbon's half-width and height", () => {
+    let maxRadius = 0;
+    let maxY = -Infinity;
+    let minY = Infinity;
+    for (let i = 0; i < position.count; i += 1) {
+      maxRadius = Math.max(maxRadius, Math.hypot(position.getX(i), position.getZ(i)));
+      maxY = Math.max(maxY, position.getY(i));
+      minY = Math.min(minY, position.getY(i));
+    }
+    expect(maxRadius).toBeCloseTo(0.25, 6);
+    expect(maxY).toBeCloseTo(0.12, 6);
+    expect(minY).toBeCloseTo(0, 6);
+  });
+
+  it("has normals that face out of the dome, so it shades like the ribbon", () => {
+    const normal = cap.getAttribute("normal");
+    for (let i = 0; i < position.count; i += 1) {
+      const outward = position.getX(i) * normal.getX(i) + position.getZ(i) * normal.getZ(i);
+      expect(normal.getY(i) >= -1e-6 && outward >= -1e-6).toBe(true);
     }
   });
 });
