@@ -19,7 +19,11 @@ const SAMPLES = 50;
 const SLOW_TEST_MS = 180_000;
 /* The 3D chunk, a WebGL context and the scene, under SwiftShader: the stage can take seconds to report. */
 const STAGE_READY_MS = 20_000;
-/* Navigation start -> the real train's first report at its stop. Measured under SwiftShader: see below. */
+/*
+ * Navigation start -> the real train's first report at its stop (the 3D chunk, a WebGL context, the
+ * scene). Measured under SwiftShader, 2 workers: reload 3.5-4.5 s desktop, 1.1-1.2 s phone; deep link
+ * 0.7-2.9 s. On a GPU (M1, production build) a reload takes about 0.54 s. Twice the worst, rounded.
+ */
 const TRAIN_ARRIVAL_MS = 8000;
 /** How long the reduced-motion test lets the train take a new stop before reading its states. */
 const TRAIN_TAKES_STOP_MS = 1000;
