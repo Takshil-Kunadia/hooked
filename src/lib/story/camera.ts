@@ -25,7 +25,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 46,
     shiftFrac: 0,
     lookY: -4.8,
-    overview: { look: [0.7, 0, 1], dist: 195, elev: 44 },
+    overview: { look: [0.7, -9.5, 1], dist: 52, elev: 44 },
   },
   tablet: {
     fov: 30,
@@ -33,7 +33,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 42,
     shiftFrac: 0.34,
     lookY: -0.9,
-    overview: { look: [0.7, 0, 1], dist: 62, elev: 38 },
+    overview: { look: [0.7, -6.5, 1], dist: 64, elev: 38 },
   },
   desktop: {
     fov: 30,
@@ -41,7 +41,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 42,
     shiftFrac: 0.36,
     lookY: -1.0,
-    overview: { look: [0.7, 0, 1], dist: 56, elev: 37 },
+    overview: { look: [0.7, -6.8, 1], dist: 58, elev: 37 },
   },
   wide: {
     fov: 30,
@@ -49,7 +49,7 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
     elev: 41,
     shiftFrac: 0.38,
     lookY: -1.0,
-    overview: { look: [0.7, 0, 1], dist: 50, elev: 36 },
+    overview: { look: [0.7, -6.2, 1], dist: 52, elev: 36 },
   },
 };
 
