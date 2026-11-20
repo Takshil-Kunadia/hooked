@@ -19,5 +19,6 @@ Thanks for helping people understand WordPress. A few rules keep the site accura
 ## Adding things
 
 - **A story step:** add it to the chapter's stage data with its beat, resting pose and copy, then check the copy against core source.
+- **An act or beat:** add it to `src/content/chapter-1/spec.ts`, write its copy in `copy.tsx`, add an explainer for every name it shows in `content/explainers.json`, and update the outline in `chapter.test.ts`. The tests check hooks, copy and explainers against the real data. See [`docs/story-engine.md`](docs/story-engine.md).
 - **A WordPress version:** run `pnpm wp-data <x.y>`, then `pnpm hook-conformance` and `pnpm test`. Story text only needs edits where the integrity tests flag drift. See [`docs/data-pipeline.md`](docs/data-pipeline.md).
 - **A 3D set piece:** build it from existing props in the vocabulary, and keep geometry helpers pure and tested in `src/lib/geometry/`.

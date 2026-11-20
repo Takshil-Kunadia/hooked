@@ -6,6 +6,7 @@ An interactive 3D explainer for WordPress core. One page visit is a metro journe
 - **Locked visual system:** [`docs/design-system.md`](docs/design-system.md)
 - **Where the WordPress facts come from:** [`docs/data-pipeline.md`](docs/data-pipeline.md)
 - **How the hook engine is proven against real WordPress:** [`docs/hook-engine.md`](docs/hook-engine.md)
+- **How the scroll story works, and how to add an act or beat:** [`docs/story-engine.md`](docs/story-engine.md)
 - **Throwaway design rounds:** `explorations/` (served as static HTML, not part of the build)
 
 ## Stack
