@@ -2,6 +2,10 @@
  * The scroll story's acts: pins, scrim, copy, numbered beats and the step rail (src/components/story),
  * ported from design round 5. StoryController writes `--vis` (0–1) and `data-off` on each pin, and
  * `data-active` on its beat. Imported by globals.css, which defines the layout-mode variants.
+ *
+ * Copy that isn't on screen is clipped out of sight (`sr-only`), never `display: none` or
+ * `visibility: hidden`: screen readers read the whole chapter and Tab reaches every word, and the
+ * controller scrolls to whatever beat takes focus.
  */
 @layer components {
   .story-act {
@@ -81,7 +85,13 @@
     }
   }
 
-  .story-pin[data-off] :is(.story-copy, .story-scrim) {
+  /* another act, or a breather: out of sight and out of the pointer's way, still read and focusable */
+  .story-pin[data-off] .story-copy {
+    pointer-events: none;
+    clip-path: inset(50%);
+  }
+
+  .story-pin[data-off] .story-scrim {
     visibility: hidden;
   }
 
@@ -96,7 +106,7 @@
     letter-spacing: 0.06em;
     color: var(--muted);
     @variant stacked {
-      display: none;
+      @apply sr-only;
     }
   }
 
@@ -171,7 +181,7 @@
   /* stacked: only the active beat shows */
   .story-beats > li:not([data-active]) {
     @variant stacked {
-      display: none;
+      @apply sr-only;
     }
   }
 
@@ -207,10 +217,10 @@
     }
   }
 
-  /* stacked: while a board fills the sheet, the list waits for the act's other beats */
-  .story-copy:has(.board) .story-hood {
+  /* stacked: while a board fills the sheet, the list waits for the act's other beats (or for focus) */
+  .story-copy:has(.board) .story-hood:not(:focus-within) {
     @variant stacked {
-      display: none;
+      @apply sr-only;
     }
   }
 
@@ -328,7 +338,7 @@
 @media (orientation: landscape) and (max-height: 560px) {
   .story-beats > li:not([data-active]),
   .story-kicker {
-    display: none;
+    @apply sr-only;
   }
 
   .story-copy h2 {

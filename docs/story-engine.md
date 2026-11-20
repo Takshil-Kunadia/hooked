@@ -84,6 +84,7 @@ These are covered by `tests/e2e/story.spec.ts`.
 - **Resize.** The controller re-measures when the width changes (any resize on a fine pointer; on touch only a width change, so the mobile URL bar doesn't trigger it), then scrolls back to the same beat.
 - **Fast scroll.** The train retargets to wherever the store says it should be, and snapping waits 160 ms after the last scroll event. A smooth scroll of our own is dropped when the reader uses the wheel or touches the screen, and snapping never fires while a finger or the scrollbar is held.
 - **Backwards.** Scrolling up sets `fromLater`; the init platform and board use it to show the later state at once instead of replaying the cue.
+- **Focus and screen readers.** Every act's copy stays in the accessibility tree and in Tab order. Copy that isn't on screen (another act, or a beat a stacked sheet hides) is clipped out of sight with `sr-only`, never `display: none` or `visibility: hidden`. When focus lands in it, the controller scrolls to that beat (`focusTarget` in `pins.ts`; instantly under reduced motion), and a focused word's card opens once its beat is on screen.
 - **Keyboard.** Down, Up, Space, PageUp and PageDown step one beat, and quick presses keep stepping mid-scroll. Space is left to a focused button, link or `<summary>` (so it still toggles one), and every key to text entry (`focusOwnsKey` in `keys.ts`); the arrows and page keys step from anywhere else, a focused rail button included.
 
 ## Debugging

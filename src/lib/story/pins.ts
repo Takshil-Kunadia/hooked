@@ -101,3 +101,31 @@ export function hashTarget(
   if (at.actIndex === index && at.beat > 0) return null;
   return Math.abs(target - scrollY) > SETTLED_PX ? target : null;
 }
+
+/** Where focus landed in the story's copy: an act, and the beat whose copy holds it (null: after the beats). */
+export interface FocusSpot {
+  readonly actIndex: number;
+  readonly beat: number | null;
+}
+
+/**
+ * Where to take the page when focus lands in an act's copy, so the focused element is on screen
+ * with its focus ring, or null to stay. Another act's copy is hidden (a breather counts as off every
+ * act), so focus there always moves the page: to the beat holding it, or to the act's last beat for
+ * what follows the beats ("Under the hood"). In the act on screen only keyboard focus moves to
+ * another beat: a click on a word in a muted beat must not scroll away from its card.
+ */
+export function focusTarget(
+  shape: ReadonlyArray<ActShape>,
+  at: StoryPosition,
+  focus: FocusSpot,
+  keyboard: boolean,
+): { readonly actIndex: number; readonly beat: number } | null {
+  const act = shape[focus.actIndex];
+  if (!act) return null;
+  const last = Math.max(0, act.beats - 1);
+  const onScreen = at.actIndex === focus.actIndex && !at.inBreather;
+  if (!onScreen) return { actIndex: focus.actIndex, beat: Math.min(focus.beat ?? last, last) };
+  if (focus.beat === null || focus.beat === at.beat || !keyboard) return null;
+  return { actIndex: focus.actIndex, beat: Math.min(focus.beat, last) };
+}
