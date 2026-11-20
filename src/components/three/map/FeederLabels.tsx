@@ -9,7 +9,7 @@ import { LABEL_WORLD_WIDTH, labelHalfWidthFraction, type LabelStyle } from "./la
 /** Round 5's feeder labels sit 1.2 past the line's outer end, at 0.78 size. */
 const SIZE = 0.78;
 const END_OFFSET = 1.2;
-/** Labels that would collide move one row further out (mu-plugins next to plugins, drop-ins next to theme). */
+/** Labels that would collide move one row further out (neighbours in the row). */
 const ROW_STEP = 1.15;
 const ROW_GAP = 0.25;
 
@@ -20,7 +20,7 @@ const TITLES: Readonly<Record<Origin, string>> = {
   mu: "mu-plugins line",
   dropin: "drop-ins line",
 };
-const SUB = "boards at wp-settings";
+const SUB = "joins at wp-settings";
 
 interface FeederLabel {
   readonly id: string;
