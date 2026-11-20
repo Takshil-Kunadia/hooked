@@ -24,13 +24,14 @@ const test = base.extend<{ plainPage: Page }>({
     });
     const context = await browser.newContext({ viewport: viewport ?? { width: 1440, height: 900 } });
     await provide(await context.newPage());
+    await context.close();
     await browser.close();
   },
 });
 
 test.describe("without WebGL", () => {
   test("shows readable copy, no canvas and no console errors", async ({ plainPage: page }) => {
-    const errors = trackErrors(page);
+    const errors = trackErrors(page, { strict: true });
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator("canvas")).toHaveCount(0);
@@ -45,7 +46,7 @@ test.describe("without WebGL", () => {
   });
 
   test("the init board plays its cascade without a train", async ({ plainPage: page }) => {
-    const errors = trackErrors(page);
+    const errors = trackErrors(page, { strict: true });
     await stepToTickets(page);
     await expect(allTickets(page).first()).toBeVisible();
     const total = await allTickets(page).count();
@@ -57,7 +58,7 @@ test.describe("without WebGL", () => {
 });
 
 test("a lost WebGL context falls back to the copy", async ({ page }) => {
-  const errors = trackErrors(page);
+  const errors = trackErrors(page, { strict: true });
   await openAct(page, "init");
   await expect(page.locator("canvas")).toBeVisible();
   await page.evaluate(() => {

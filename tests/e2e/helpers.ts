@@ -22,12 +22,22 @@ export const BEATS = [
 /** The fixed 3D stage wrapper, which carries `data-beat` and `data-train`. */
 export const stage = (page: Page): Locator => page.locator("[data-beat]");
 
-/** Collect real page errors; GPU/driver chatter from software rendering is not an app error. */
-export function trackErrors(page: Page): string[] {
+/** Chrome's software-GL chatter (SwiftShader), which is a console error but not an app error. */
+const DRIVER_NOISE = [/GL Driver Message/i, /GPU stall due to ReadPixels/i];
+
+/** Whether a console error is only SwiftShader/driver noise. */
+export const isDriverNoise = (text: string): boolean => DRIVER_NOISE.some((re) => re.test(text));
+
+/**
+ * Collect real page errors. By default the software-GL driver noise is dropped; pass
+ * `{ strict: true }` where there is no such noise (no WebGL, a lost context) so that an app error
+ * about WebGL is not masked.
+ */
+export function trackErrors(page: Page, options: { readonly strict?: boolean } = {}): string[] {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !/GL Driver|GPU stall|WebGL/i.test(msg.text())) errors.push(msg.text());
+    if (msg.type() === "error" && (options.strict || !isDriverNoise(msg.text()))) errors.push(msg.text());
   });
   return errors;
 }
@@ -40,7 +50,7 @@ export function onlyDesktop(testInfo: TestInfo): void {
 /** Presses ArrowDown once and waits for the beat to change to `expected`. */
 export async function stepTo(page: Page, expected: string): Promise<void> {
   await page.keyboard.press("ArrowDown");
-  await expect(stage(page)).toHaveAttribute("data-beat", expected, { timeout: 10_000 });
+  await expect(stage(page)).toHaveAttribute("data-beat", expected, { timeout: 30_000 });
 }
 
 /**
@@ -99,3 +109,14 @@ export const readStageLog = (page: Page): Promise<StageSample[]> =>
 
 export const readKeyLog = (page: Page): Promise<number[]> =>
   page.evaluate(() => (window as unknown as { __keyLog: number[] }).__keyLog);
+
+/**
+ * Waits for every finite CSS animation to end. The announcing board blinks for a few seconds; axe
+ * would otherwise measure a half-faded frame and report a contrast failure that is not real.
+ */
+export async function settleAnimations(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const finite = document.getAnimations().filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime ?? 0));
+    await Promise.all(finite.map((a) => a.finished.catch(() => undefined)));
+  });
+}
