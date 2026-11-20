@@ -1,12 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import type { ChapterSpec } from "@/lib/story/chapter";
 import type { Ticket } from "@/lib/story/facts";
 import { storyStore } from "@/lib/story/store";
 import { trainScreen } from "@/lib/story/train-screen";
 import { isWebGLAvailable } from "@/lib/webgl/support";
+import { CopyOnly } from "./CopyOnly";
 import { StageErrorBoundary } from "./StageErrorBoundary";
 import { useStoryViewport } from "./useStoryViewport";
 
@@ -58,10 +59,21 @@ export function StageMount({ chapter, tickets }: StageMountProps) {
   /* the copy reads the layout mode too, so keep it current even without WebGL */
   useStoryViewport();
   const canRender3D = useSyncExternalStore(subscribe, getWebGLSupport, () => false);
-  if (!canRender3D) return null;
+  const [lost, setLost] = useState(false);
+  /* `webglcontextlost` doesn't bubble, so listen in the capture phase for the canvas inside */
+  const bind = useCallback((el: HTMLDivElement) => {
+    const unbindData = bindStageData(el);
+    const onLost = (): void => setLost(true);
+    el.addEventListener("webglcontextlost", onLost, true);
+    return () => {
+      unbindData();
+      el.removeEventListener("webglcontextlost", onLost, true);
+    };
+  }, []);
+  if (!canRender3D || lost) return <CopyOnly />;
   return (
-    <div ref={bindStageData} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 h-lvh">
-      <StageErrorBoundary>
+    <div ref={bind} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 h-lvh">
+      <StageErrorBoundary fallback={<CopyOnly />}>
         <MetroStage chapter={chapter} tickets={tickets} />
       </StageErrorBoundary>
     </div>

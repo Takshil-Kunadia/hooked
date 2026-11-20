@@ -4,6 +4,8 @@ import { Component, type ReactNode } from "react";
 
 interface StageErrorBoundaryProps {
   readonly children: ReactNode;
+  /** What to render after a failure; nothing by default. */
+  readonly fallback?: ReactNode;
 }
 
 interface StageErrorBoundaryState {
@@ -29,6 +31,6 @@ export class StageErrorBoundary extends Component<StageErrorBoundaryProps, Stage
   }
 
   override render(): ReactNode {
-    return this.state.failed ? null : this.props.children;
+    return this.state.failed ? (this.props.fallback ?? null) : this.props.children;
   }
 }
