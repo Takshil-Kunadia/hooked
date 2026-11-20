@@ -24,7 +24,7 @@ export interface MapMaterials {
 }
 
 /** Round 5's `mat()`: porcelain-like physical material with a soft clearcoat. */
-const physical = (color: string, extra: MeshPhysicalMaterialParameters = {}): MeshPhysicalMaterial =>
+export const physical = (color: string, extra: MeshPhysicalMaterialParameters = {}): MeshPhysicalMaterial =>
   new MeshPhysicalMaterial({ color, roughness: 0.45, clearcoat: 0.5, clearcoatRoughness: 0.3, ...extra });
 
 const ORIGINS = Object.keys(ORIGIN_COLOURS) as Origin[];
