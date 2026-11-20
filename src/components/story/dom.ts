@@ -5,6 +5,7 @@
 import { measureActs, type ActShape } from "@/lib/story/pins";
 import type { Rect } from "@/lib/story/placement";
 import type { MeasuredAct } from "@/lib/story/scroll";
+import { scrollInFlight, startIntent, type ScrollIntent } from "@/lib/story/scroll-intent";
 
 /** Elements a hover card or the train pill must never cover: the copy, boards and header. */
 const AVOID = "[data-card-avoid]";
@@ -31,8 +32,21 @@ export function pinHeight(): number {
   return document.querySelector<HTMLElement>("[data-pin]")?.offsetHeight || window.innerHeight;
 }
 
+let intent: ScrollIntent | null = null;
+
 export function scrollToY(top: number, smooth: boolean): void {
+  intent = smooth ? startIntent(top, performance.now()) : null;
   window.scrollTo({ top, behavior: smooth ? "smooth" : "instant" });
+}
+
+/** True while a smooth scroll started by `scrollToY` is still on its way. */
+export function programmaticScrollInFlight(): boolean {
+  return scrollInFlight(intent, window.scrollY, performance.now());
+}
+
+/** The reader took over (wheel or touch): forget the scroll `scrollToY` started. */
+export function dropProgrammaticScroll(): void {
+  intent = null;
 }
 
 /** On-screen boxes of everything a card or the pill must keep clear of. */

@@ -15,7 +15,7 @@ import {
 import { REDUCED_MOTION_QUERY, syncReducedMotion } from "@/lib/story/reduced-motion";
 import { beatScrollY, positionAt, type MeasuredAct, type StoryPosition } from "@/lib/story/scroll";
 import { storyStore } from "@/lib/story/store";
-import { measureStory, pinHeight, scrollToY } from "./dom";
+import { dropProgrammaticScroll, measureStory, pinHeight, programmaticScrollInFlight, scrollToY } from "./dom";
 
 const COARSE_POINTER = "(pointer: coarse)";
 const PASSIVE = { passive: true } as const;
@@ -104,10 +104,19 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
     vh = pinHeight();
   };
   const settle = (): void => {
+    if (programmaticScrollInFlight()) {
+      armSnap();
+      return;
+    }
     stepping = null;
     if (snapOff || holding || storyStore.getState().reducedMotion) return;
     const target = settleTarget(acts, window.scrollY, vh);
     if (target !== null) scrollToY(target, true);
+  };
+  /* wheel and touch cancel a smooth scroll; the reader is steering now */
+  const takeOver = (): void => {
+    dropProgrammaticScroll();
+    stepping = null;
   };
   const armSnap = (): void => {
     window.clearTimeout(snapTimer);
@@ -156,8 +165,10 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
     ["resize", onResize],
     ["load", onLoad],
     ["keydown", onKey],
+    ["wheel", takeOver, PASSIVE],
     ["pointerdown", hold, PASSIVE],
     ["pointerup", release, PASSIVE],
+    ["touchstart", takeOver, PASSIVE],
     ["touchstart", hold, PASSIVE],
     ["touchend", release, PASSIVE],
     ["touchcancel", release, PASSIVE],
