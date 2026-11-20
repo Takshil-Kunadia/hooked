@@ -27,15 +27,21 @@ export function neutralToneMap([r, g, b]: RGB): RGB {
   return [sr, sg, sb];
 }
 
-/** The input that tone-maps to `goal`, found by fixed-point iteration, as round 5 does. */
-export function toneCompensate(goal: RGB): RGB {
+/**
+ * The input that tone-maps to `goal`, found by fixed-point iteration, as round 5 does. With a
+ * `ceiling` (1 for anything drawn on a 2D canvas), each step stays within it, so a channel that
+ * can't reach its goal stops at the ceiling while the others still land: the hue holds, where
+ * clipping afterwards would oversaturate it.
+ */
+export function toneCompensate(goal: RGB, ceiling = Infinity): RGB {
+  const fit = (c: number): number => Math.min(ceiling, Math.max(0, c));
   let guess: RGB = goal;
   for (let i = 0; i < COMPENSATE_STEPS; i += 1) {
     const out = neutralToneMap(guess);
     guess = [
-      Math.max(0, guess[0] + (goal[0] - out[0])),
-      Math.max(0, guess[1] + (goal[1] - out[1])),
-      Math.max(0, guess[2] + (goal[2] - out[2])),
+      fit(guess[0] + (goal[0] - out[0])),
+      fit(guess[1] + (goal[1] - out[1])),
+      fit(guess[2] + (goal[2] - out[2])),
     ];
   }
   return guess;
