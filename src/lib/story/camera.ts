@@ -57,6 +57,19 @@ export const CAMERA: Readonly<Record<LayoutMode, CameraSpec>> = {
 };
 
 const SUBJECT_LIFT = 0.7;
+
+/**
+ * The feeders shot pulls back (`distScale`) and aims further down the fans (`dz`, world units
+ * towards the camera) so the four labels past the lines' outer ends stay on screen and clear of the
+ * departure board (desktop) or the sheet (stacked). Tuned per layout with `camera.test.ts`'s pin.
+ */
+const FEEDERS_FRAMING: Readonly<Record<LayoutMode, { readonly distScale: number; readonly dz: number }>> = {
+  stacked: { distScale: 1.3, dz: 4.4 },
+  tablet: { distScale: 1.32, dz: 1.4 },
+  desktop: { distScale: 1.18, dz: 1.8 },
+  wide: { distScale: 1.12, dz: 2.5 },
+};
+
 const HALF_FOV_TAN = Math.tan((15 * Math.PI) / 180);
 
 function rig(look: Vec3, dist: number, elevDeg: number): { position: Vec3; lookAt: Vec3 } {
@@ -72,30 +85,32 @@ export function shotFor(
   subject: Vec3 | "overview",
   layout: LayoutMode,
   aspect: number,
+  shot?: ShotId,
 ): { position: Vec3; lookAt: Vec3 } {
   const cam = CAMERA[layout];
   if (subject === "overview") return rig(cam.overview.look, cam.overview.dist, cam.overview.elev);
-  const halfW = cam.dist * HALF_FOV_TAN * aspect;
-  return rig([subject[0] - cam.shiftFrac * halfW, subject[1] + cam.lookY, subject[2]], cam.dist, cam.elev);
+  const dist = shot === "feeders" ? cam.dist * FEEDERS_FRAMING[layout].distScale : cam.dist;
+  const halfW = dist * HALF_FOV_TAN * aspect;
+  return rig([subject[0] - cam.shiftFrac * halfW, subject[1] + cam.lookY, subject[2]], dist, cam.elev);
 }
 
-function feedersSubject(): Vec3 {
+function feedersSubject(layout: LayoutMode): Vec3 {
   const settings = stationById("settings");
   const starts = FEEDER_LINES.filter((l) => l.kind === "feeder").flatMap((l) => l.points.slice(0, 1));
   const meanX = starts.reduce((sum, p) => sum + p[0], 0) / starts.length;
   const meanZ = starts.reduce((sum, p) => sum + p[1], 0) / starts.length;
-  return [(settings.x + meanX) / 2, SUBJECT_LIFT, (settings.z + meanZ) / 2];
+  return [(settings.x + meanX) / 2, SUBJECT_LIFT, (settings.z + meanZ) / 2 + FEEDERS_FRAMING[layout].dz];
 }
 
 /** What the camera looks at for a beat's shot. */
-export function subjectFor(shot: ShotId, station: StationId): Vec3 | "overview" {
+export function subjectFor(shot: ShotId, station: StationId, layout: LayoutMode): Vec3 | "overview" {
   switch (shot) {
     case "overview":
       return "overview";
     case "depot":
       return [DEPOT.x, SUBJECT_LIFT, DEPOT.z];
     case "feeders":
-      return feedersSubject();
+      return feedersSubject(layout);
     case "platform": {
       const init = stationById("init");
       return [init.x + 0.8, SUBJECT_LIFT, 0.4];
