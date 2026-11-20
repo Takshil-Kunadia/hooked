@@ -6,6 +6,8 @@ interface ActProps {
   readonly act: ActSpec;
   /** Beat copy by beat id. */
   readonly copy: Readonly<Record<string, ReactNode>>;
+  /** After the beats: the act's "Under the hood" list, if it has one. */
+  readonly footer?: ReactNode;
   /** Shown with the copy: the act's departure board, if it has one. */
   readonly children?: ReactNode;
 }
@@ -15,7 +17,7 @@ interface ActProps {
  * The copy, its scrim and the board are server-rendered; StoryController fades them (`--vis`,
  * `data-off`) and moves `data-active` to the current beat.
  */
-export function Act({ act, copy, children }: ActProps) {
+export function Act({ act, copy, footer, children }: ActProps) {
   const titleId = `${act.id}-title`;
   return (
     <section
@@ -37,6 +39,7 @@ export function Act({ act, copy, children }: ActProps) {
                 </li>
               ))}
             </ol>
+            {footer}
           </div>
           {children}
         </div>

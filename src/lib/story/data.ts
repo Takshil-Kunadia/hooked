@@ -16,12 +16,16 @@ export async function getStoryData(): Promise<StoryData> {
   const { latest } = await readIndex(CONTENT_ROOT);
   const [meta, trace] = await Promise.all([readMeta(CONTENT_ROOT, latest), readTrace(CONTENT_ROOT, latest, SCENARIO)]);
 
+  /* in the order the hooks first fired, so each "Under the hood" list reads in run order */
+  const order = firedOrder(trace, SOURCE_HOOKS);
   const sources = Object.fromEntries(
-    SOURCE_HOOKS.map((name) => {
-      const source = hookSource(trace, name);
-      if (!source) throw new Error(`The ${SCENARIO} trace for ${latest} has no source location for "${name}"`);
-      return [name, { file: source.file, line: source.line, url: sourceUrl(meta.wp, source.file, source.line) }];
-    }),
+    [...SOURCE_HOOKS]
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .map((name) => {
+        const source = hookSource(trace, name);
+        if (!source) throw new Error(`The ${SCENARIO} trace for ${latest} has no source location for "${name}"`);
+        return [name, { file: source.file, line: source.line, url: sourceUrl(meta.wp, source.file, source.line) }];
+      }),
   );
 
   return {

@@ -1,1 +1,174 @@
-{ "explainers": [] }
+{
+  "explainers": [
+    {
+      "name": "browser",
+      "kind": "concept",
+      "summary": "The app you visit websites with, such as Chrome, Safari or Firefox. It sends the request and draws the page that comes back."
+    },
+    {
+      "name": "web server",
+      "kind": "concept",
+      "summary": "An always-on computer that answers requests from browsers, running software such as nginx or Apache. For a WordPress page, it hands the work to PHP."
+    },
+    {
+      "name": "PHP",
+      "kind": "concept",
+      "summary": "The programming language WordPress is written in. The web server asks PHP to run WordPress's code, and that code builds the page."
+    },
+    {
+      "name": "database",
+      "kind": "concept",
+      "summary": "Where WordPress keeps your content (posts, pages, settings and users) in tables, usually in MySQL or MariaDB. On the map, it's the depot."
+    },
+    {
+      "name": "index.php",
+      "kind": "file",
+      "summary": "WordPress's front door: visits to your site's pages start here. The file is tiny; it switches on the theme and loads wp-blog-header.php."
+    },
+    {
+      "name": "wp-blog-header.php",
+      "kind": "file",
+      "summary": "Loads WordPress through wp-load.php, runs wp() to work out what was asked for, then loads the theme's template."
+    },
+    {
+      "name": "wp-load.php",
+      "kind": "file",
+      "summary": "Notes where WordPress lives on the server, then loads wp-config.php from WordPress's folder or the folder above it. With no config file, it starts the setup instead."
+    },
+    {
+      "name": "wp-config.php",
+      "kind": "file",
+      "summary": "Your site's own settings file: the database name, user and password, security keys and options such as WP_DEBUG. It ends by loading wp-settings.php."
+    },
+    {
+      "name": "wp-settings.php",
+      "kind": "file",
+      "summary": "The interchange where WordPress sets itself up. It loads core's code, then must-use plugins, plugins and the theme, announcing each stage with a hook."
+    },
+    {
+      "name": "plugin.php",
+      "kind": "file",
+      "summary": "Despite the name, this is part of core, not a plugin. It holds the hook functions: add_action, do_action, add_filter, apply_filters and the rest."
+    },
+    {
+      "name": "class-wp-hook.php",
+      "kind": "file",
+      "summary": "Defines WP_Hook, the class that keeps each hook's listeners sorted by priority and calls them in that order."
+    },
+    {
+      "name": "functions.php",
+      "kind": "file",
+      "summary": "A theme's own file of setup code, loaded while WordPress starts up. With a child theme, the child's functions.php loads first, then the parent's."
+    },
+    {
+      "name": "muplugins_loaded",
+      "kind": "hook",
+      "summary": "Fires once the must-use plugins, the ones that always run, have loaded. Regular plugins haven't loaded yet.",
+      "example": "add_action( 'muplugins_loaded', 'my_early_setup' );"
+    },
+    {
+      "name": "plugins_loaded",
+      "kind": "hook",
+      "summary": "Fires once every active plugin has loaded. The theme hasn't loaded yet, so it's a plugin's first chance to see all the others.",
+      "example": "add_action( 'plugins_loaded', 'my_plugin_boot' );"
+    },
+    {
+      "name": "setup_theme",
+      "kind": "hook",
+      "summary": "Fires just before WordPress sets up and loads the active theme."
+    },
+    {
+      "name": "after_setup_theme",
+      "kind": "hook",
+      "summary": "Fires right after the theme's functions.php has loaded. Themes use it to switch on features, such as post formats or editor styles.",
+      "example": "add_action( 'after_setup_theme', 'my_theme_supports' );"
+    },
+    {
+      "name": "init",
+      "kind": "hook",
+      "summary": "Fires once plugins and the theme have loaded and the current user is set up, before anything is sent to the browser. Plugins register their content types, blocks and settings here.",
+      "example": "add_action( 'init', 'my_plugin_setup' );"
+    },
+    {
+      "name": "wp_loaded",
+      "kind": "hook",
+      "summary": "Fires right after init, once WordPress, every plugin and the theme are fully loaded."
+    },
+    {
+      "name": "do_action",
+      "kind": "function",
+      "summary": "Fires an action: it calls every function signed up for that hook, lowest priority first. It hands nothing back.",
+      "example": "do_action( 'init' );"
+    },
+    {
+      "name": "add_action",
+      "kind": "function",
+      "summary": "Signs a function up for an action, so WordPress calls it when that hook fires. The optional priority is its ticket number, and the default is 10.",
+      "example": "add_action( 'init', 'my_plugin_setup', 20 );"
+    },
+    {
+      "name": "WP_Query",
+      "kind": "concept",
+      "summary": "The class WordPress uses to ask the database for posts. On this visit, it fetches the one post the address points to."
+    },
+    {
+      "name": "template",
+      "kind": "concept",
+      "summary": "The junction where WordPress picks the template that draws the page. It walks a list from most specific to most general and takes the first one the theme has."
+    },
+    {
+      "name": "the_title",
+      "kind": "hook",
+      "summary": "A filter: before a theme shows a post's title, WordPress passes the title through every function on the_title, and each one may change it."
+    },
+    {
+      "name": "200 OK",
+      "kind": "concept",
+      "summary": "The status code a web server sends when a page worked. A missing page gets 404 Not Found instead."
+    },
+    {
+      "name": "create_initial_post_types",
+      "kind": "function",
+      "summary": "Registers WordPress's built-in post types, such as posts, pages, attachments, revisions and block templates, and post statuses like draft and published."
+    },
+    {
+      "name": "create_initial_taxonomies",
+      "kind": "function",
+      "summary": "Registers the built-in ways to group posts, such as categories and tags. This run, on init, also gives them pretty addresses like /category/news/."
+    },
+    {
+      "name": "_wp_register_default_icon_collections",
+      "kind": "function",
+      "summary": "Registers the core icon collection, labelled WordPress, that the built-in icons belong to. It's new in WordPress 7.1."
+    },
+    {
+      "name": "wp_initialize_site_preview_hooks",
+      "kind": "function",
+      "summary": "Checks whether this visit is a site preview: the address asks for one and the visitor may edit the theme. Only then does it mark the page as shown in a frame; on a visit like this one, it does nothing."
+    },
+    {
+      "name": "hooked_demo_init",
+      "kind": "function",
+      "summary": "A made-up plugin's listener, here so a plugin's ticket shows on the platform. It does nothing; a real plugin would set itself up here.",
+      "demo": true
+    },
+    {
+      "name": "twentytwentyfive_block_styles",
+      "kind": "function",
+      "summary": "From the Twenty Twenty-Five theme: adds a Checkmark style to the List block, so a list can show ticks instead of bullets.",
+      "docs": false
+    },
+    {
+      "name": "twentytwentyfive_pattern_categories",
+      "kind": "function",
+      "summary": "From the Twenty Twenty-Five theme: adds two pattern categories, Pages and Post formats, to group the theme's ready-made layouts in the editor.",
+      "docs": false
+    },
+    {
+      "name": "twentytwentyfive_register_block_bindings",
+      "kind": "function",
+      "summary": "From the Twenty Twenty-Five theme: registers a block binding source, Post format name, so a block can show the post's format, such as Gallery or Quote.",
+      "docs": false
+    }
+  ]
+}

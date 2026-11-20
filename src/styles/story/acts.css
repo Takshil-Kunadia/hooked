@@ -181,6 +181,8 @@
     background: var(--hairline);
     font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
     font-size: 0.85em;
+    /* a file name or path never breaks at its hyphens */
+    white-space: nowrap;
   }
 
   [data-card] {
@@ -190,6 +192,59 @@
   code[data-card] {
     border-bottom: 1.5px dashed var(--accent);
     border-radius: 7px 7px 0 0;
+  }
+
+  /* "Under the hood": the act's hooks for developers, after the beats, closed until asked for */
+  .story-hood {
+    margin-top: 22px;
+    padding-left: 40px;
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--muted);
+    @variant stacked {
+      margin-top: 12px;
+      padding-left: 0;
+    }
+  }
+
+  /* stacked: while a board fills the sheet, the list waits for the act's other beats */
+  .story-copy:has(.board) .story-hood {
+    @variant stacked {
+      display: none;
+    }
+  }
+
+  .story-hood summary {
+    width: fit-content;
+    font-weight: 600;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+
+  .story-hood p {
+    margin-top: 8px;
+  }
+
+  .story-hood ol {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+    list-style: none;
+  }
+
+  .story-hood li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+  }
+
+  .story-hood a {
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.85em;
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   /* the step rail: ticks on the left, labels on hover or focus; labels hidden on tablet, rail on phones */
