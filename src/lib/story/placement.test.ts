@@ -79,6 +79,13 @@ describe("placeCardNear", () => {
     expect(placeCardNear(row, wide, phone, [sheet, board])).toEqual({ x: 24, y: 208 });
   });
 
+  it("steps beside a nearly full-height column at its top when a board fills the space by the anchor", () => {
+    /* an open "Under the hood" stretches the copy; its words sit low, level with the board */
+    const tall: Rect = { x: 100, y: 20, w: 400, h: 760 };
+    const word: Rect = { x: 140, y: 640, w: 120, h: 24 };
+    expect(placeCardNear(word, card, viewport, [tall, board])).toEqual({ x: 512, y: 32 });
+  });
+
   it("falls back to a spot by the anchor, inside the viewport, when nothing is clear", () => {
     const everything: Rect = { x: 0, y: 0, w: 1000, h: 800 };
     expect(placeCardNear(anchor, card, viewport, [everything])).toEqual({ x: 300, y: 352 });

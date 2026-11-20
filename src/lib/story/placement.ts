@@ -60,7 +60,8 @@ const clampTo = (value: number, size: number, limit: number): number =>
 /**
  * Thin anchors just outside a box, level with the anchor: to its right and left, then above and
  * below it, first lined up with the anchor and then slid inside the viewport (a card nearly as wide
- * as a phone can't line up with either end of a word).
+ * as a phone can't line up with either end of a word). Last, to its right and left from its top, for
+ * a box nearly as tall as the viewport whose sides are blocked at the anchor's level.
  */
 function sidesOf(box: Rect, anchor: Rect, card: Size, viewport: Size): ReadonlyArray<Rect> {
   const slid = clampTo(anchor.x, card.w, viewport.w);
@@ -71,6 +72,8 @@ function sidesOf(box: Rect, anchor: Rect, card: Size, viewport: Size): ReadonlyA
     { x: anchor.x, y: box.y + box.h, w: anchor.w, h: 0 },
     { x: slid, y: box.y, w: card.w, h: 0 },
     { x: slid, y: box.y + box.h, w: card.w, h: 0 },
+    { x: box.x + box.w + GAP, y: box.y, w: 0, h: 0 },
+    { x: box.x - GAP, y: box.y, w: 0, h: 0 },
   ];
 }
 
