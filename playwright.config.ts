@@ -9,7 +9,11 @@ const webgl = { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  testMatch: "**/*.spec.ts",
   fullyParallel: true,
+  /* SwiftShader renders in software on the CPU: more than two browsers at once starve each other's frames */
+  workers: 2,
+  timeout: 60_000,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
   reporter: isCI ? "github" : "list",

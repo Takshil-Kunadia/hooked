@@ -1,15 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
-
-/** Collect real page errors; GPU/driver chatter from software rendering is not an app error. */
-function trackErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on("pageerror", (err) => errors.push(err.message));
-  page.on("console", (msg) => {
-    if (msg.type() === "error" && !/GL Driver|GPU stall|WebGL/i.test(msg.text())) errors.push(msg.text());
-  });
-  return errors;
-}
+import { expect, test } from "@playwright/test";
+import { trackErrors } from "./helpers";
 
 test.describe("home page", () => {
   test("renders the hero copy as real HTML and mounts the 3D stage", async ({ page }) => {
@@ -21,7 +12,7 @@ test.describe("home page", () => {
   });
 
   test("keeps the copy when WebGL is unavailable", async ({ page }) => {
-    const errors = trackErrors(page);
+    const errors = trackErrors(page, { strict: true });
     await page.addInitScript(() => {
       const original = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
