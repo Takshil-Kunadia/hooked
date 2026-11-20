@@ -5,12 +5,14 @@ import { focusOwnsKey, stepDirection } from "@/lib/story/keys";
 import {
   activeBeatOf,
   copyVisibility,
+  focusTarget,
   globalIndexOf,
   hashTarget,
   keyTarget,
   settleTarget,
   SNAP_IDLE_MS,
   type ActShape,
+  type FocusSpot,
 } from "@/lib/story/pins";
 import { REDUCED_MOTION_QUERY, syncReducedMotion } from "@/lib/story/reduced-motion";
 import { beatScrollY, positionAt, type MeasuredAct, type StoryPosition } from "@/lib/story/scroll";
@@ -19,6 +21,8 @@ import { dropProgrammaticScroll, measureStory, pinHeight, programmaticScrollInFl
 
 const COARSE_POINTER = "(pointer: coarse)";
 const PASSIVE = { passive: true } as const;
+/** The hover card (HookCard): focus coming back from it is not the reader moving on. */
+const CARD_PANEL = ".hook-card";
 
 /** A reload or back/forward visit, where the browser restores the scroll position itself. */
 function isRestoredVisit(): boolean {
@@ -38,6 +42,15 @@ function nodesOf({ id }: ActShape): ActNodes {
     pin: section?.querySelector<HTMLElement>("[data-pin]") ?? null,
     beats: section ? Array.from(section.querySelectorAll<HTMLElement>("[data-beats] > li")) : [],
   };
+}
+
+/** The act, and the beat within it, whose copy holds `el`; null outside every act's copy. */
+function locateCopy(nodes: ReadonlyArray<ActNodes>, el: Element): FocusSpot | null {
+  const actIndex = nodes.findIndex((n) => n.pin?.contains(el));
+  const beats = nodes[actIndex]?.beats;
+  if (!beats) return null;
+  const beat = beats.findIndex((li) => li.contains(el));
+  return { actIndex, beat: beat === -1 ? null : beat };
 }
 
 /** Writes one act's copy visibility and active beat, touching the DOM only when they change. */
@@ -67,13 +80,15 @@ const samePlace = (a: StoryPosition | null, b: StoryPosition): boolean =>
 /**
  * Drives the story from the page's scroll position: reports the beat to the store, fades the copy,
  * snaps to the nearest beat after 160ms idle (unless `?snap=off` or reduced motion), steps beats on
- * ↓/↑/Space/PageUp/PageDown, and re-measures when the width changes (any resize on a fine pointer).
- * It owns the store's reduced-motion flag; with reduced motion every scroll it makes is instant.
+ * ↓/↑/Space/PageUp/PageDown, follows focus into copy that isn't on screen, and re-measures when the
+ * width changes (any resize on a fine pointer). It owns the store's reduced-motion flag; with
+ * reduced motion every scroll it makes is instant.
  */
 function startStory(shape: ReadonlyArray<ActShape>): () => void {
   /* first, so snapping, keys and the rail read the right flag even before (or without) the 3D stage */
   const stopMotionSync = syncReducedMotion(storyStore, window.matchMedia(REDUCED_MOTION_QUERY));
-  const paint = createPainter(shape.map(nodesOf));
+  const nodes = shape.map(nodesOf);
+  const paint = createPainter(nodes);
   const snapOff = new URLSearchParams(window.location.search).get("snap") === "off";
   const coarse = window.matchMedia(COARSE_POINTER);
   let acts: MeasuredAct[] = measureStory(shape);
@@ -81,6 +96,7 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
   let width = window.innerWidth;
   let position: StoryPosition | null = null;
   let frame = 0;
+  let focusFrame = 0;
   let snapTimer = 0;
   let holding = false;
   /** Where the last step key is taking the page, so quick presses keep stepping mid-scroll. */
@@ -136,6 +152,22 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
     stepping = target;
     scrollToY(target, !storyStore.getState().reducedMotion);
   };
+  /* Tab into copy that isn't on screen (another act, or a beat a stacked sheet hides): go to its beat */
+  const onFocusIn = (e: Event): void => {
+    const el = e.target;
+    if (!(el instanceof Element) || !(e instanceof FocusEvent)) return;
+    if (e.relatedTarget instanceof Element && e.relatedTarget.closest(CARD_PANEL)) return;
+    const spot = locateCopy(nodes, el);
+    const at = positionAt(acts, window.scrollY, vh);
+    const goal = spot && focusTarget(shape, at, spot, el.matches(":focus-visible"));
+    const act = goal ? acts[goal.actIndex] : undefined;
+    if (!goal || !act) return;
+    const target = beatScrollY(act, goal.beat, vh);
+    stepping = target;
+    cancelAnimationFrame(focusFrame);
+    /* next frame: after the browser's own scroll to the focused element, which would cut ours short */
+    focusFrame = requestAnimationFrame(() => scrollToY(target, !storyStore.getState().reducedMotion));
+  };
   /* rotation or a window resize: re-measure, then keep the same beat in place */
   const onResize = (): void => {
     if (coarse.matches && window.innerWidth === width) return;
@@ -165,6 +197,7 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
     ["resize", onResize],
     ["load", onLoad],
     ["keydown", onKey],
+    ["focusin", onFocusIn],
     ["wheel", takeOver, PASSIVE],
     ["pointerdown", hold, PASSIVE],
     ["pointerup", release, PASSIVE],
@@ -187,6 +220,7 @@ function startStory(shape: ReadonlyArray<ActShape>): () => void {
     stopMotionSync();
     for (const [type, fn] of listeners) window.removeEventListener(type, fn);
     cancelAnimationFrame(frame);
+    cancelAnimationFrame(focusFrame);
     window.clearTimeout(snapTimer);
   };
 }

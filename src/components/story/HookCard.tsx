@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "re
 import { useStore } from "zustand";
 import type { CardInfo } from "@/lib/story/cards";
 import { placeCardNear, type Rect } from "@/lib/story/placement";
-import { storyStore } from "@/lib/story/store";
+import { storyStore, type StoryState } from "@/lib/story/store";
 import { avoidRects } from "./dom";
 
 const CARD = "[data-card]";
@@ -40,6 +40,28 @@ function closeCard(ctx: CardContext, card: HTMLElement | null): void {
   const returnTo = card?.contains(document.activeElement) && ctx.anchor instanceof HTMLElement ? ctx.anchor : null;
   storyStore.getState().pin(null);
   returnTo?.focus({ preventScroll: true });
+}
+
+/** Whether a copy word is where the story is: in the current beat, or after the current act's beats. */
+function shownAt(el: Element, at: Pick<StoryState, "actId" | "beat">): boolean {
+  if (el.closest("section")?.id !== at.actId) return false;
+  const li = el.closest("[data-beats] > li");
+  return li === null || Array.from(li.parentElement?.children ?? []).indexOf(li) === at.beat;
+}
+
+/**
+ * The beat moved on: a word's card closes, unless that word holds focus and is now on screen. Focus
+ * moving into another beat scrolls the page there (StoryController), so its card opens on arrival.
+ */
+function followBeat(ctx: CardContext, card: HTMLElement | null, at: StoryState): void {
+  const focused = document.activeElement;
+  const word = focused && cardHost(focused)?.[0] === focused && shownAt(focused, at) ? focused : null;
+  if (ctx.anchor instanceof Element && ctx.anchor !== word) closeCard(ctx, card);
+  const name = word?.getAttribute("data-card");
+  const s = storyStore.getState();
+  if (!word || !name || s.pinned !== null || s.hovered === name) return;
+  ctx.source = word;
+  s.hover(name);
 }
 
 /**
@@ -97,7 +119,16 @@ function bindCards(ctx: CardContext, cardRef: RefObject<HTMLDivElement | null>):
   const onMove = (e: PointerEvent): void => {
     ctx.pointer = { x: e.clientX, y: e.clientY };
   };
-  /* resolve where the card points whenever its name changes; close word cards when the beat moves on */
+  /* a word's card follows its word while the page scrolls (a focused word's beat sliding into place) */
+  let frame = 0;
+  const follow = (): void => {
+    frame = 0;
+    if (cardRef.current && ctx.anchor instanceof Element) positionCard(cardRef.current, ctx);
+  };
+  const onScroll = (): void => {
+    if (frame === 0 && ctx.anchor instanceof Element) frame = requestAnimationFrame(follow);
+  };
+  /* resolve where the card points whenever its name changes; follow the beat when it moves on */
   const unsubscribe = storyStore.subscribe((s, prev) => {
     const name = s.pinned ?? s.hovered;
     const source = ctx.source;
@@ -106,7 +137,7 @@ function bindCards(ctx: CardContext, cardRef: RefObject<HTMLDivElement | null>):
       const fromWord = source !== null && source.getAttribute("data-card") === name;
       ctx.anchor = name === null ? null : fromWord ? source : ctx.pointer;
     }
-    if (s.globalIndex !== prev.globalIndex && ctx.anchor instanceof Element) closeCard(ctx, cardRef.current);
+    if (s.globalIndex !== prev.globalIndex) followBeat(ctx, cardRef.current, s);
   });
 
   const listeners = [
@@ -119,10 +150,13 @@ function bindCards(ctx: CardContext, cardRef: RefObject<HTMLDivElement | null>):
   ] as const;
   for (const [type, fn] of listeners) document.addEventListener(type, fn as EventListener);
   document.addEventListener("pointermove", onMove, { passive: true });
+  window.addEventListener("scroll", onScroll, { passive: true });
   return () => {
     unsubscribe();
     for (const [type, fn] of listeners) document.removeEventListener(type, fn as EventListener);
     document.removeEventListener("pointermove", onMove);
+    window.removeEventListener("scroll", onScroll);
+    cancelAnimationFrame(frame);
   };
 }
 
@@ -135,12 +169,17 @@ function anchorRect(anchor: Anchor | null, pointer: { x: number; y: number }): R
   return { x: at.x + POINTER_OFFSET, y: at.y + POINTER_OFFSET, w: 0, h: 0 };
 }
 
-/** Places the card clear of the copy, boards and header; moves focus in if it was pinned by keyboard. */
-function placeCardElement(el: HTMLElement, ctx: CardContext, pinned: boolean): void {
+/** Places the card beside what it points at, clear of the copy, boards and header. */
+function positionCard(el: HTMLElement, ctx: CardContext): void {
   const viewport = { w: window.innerWidth, h: window.innerHeight };
   const anchor = anchorRect(ctx.anchor, ctx.pointer);
   const spot = placeCardNear(anchor, { w: el.offsetWidth, h: el.offsetHeight }, viewport, avoidRects());
   el.style.transform = `translate(${Math.round(spot.x)}px, ${Math.round(spot.y)}px)`;
+}
+
+/** Places the card; moves focus in if it was pinned by keyboard. */
+function placeCardElement(el: HTMLElement, ctx: CardContext, pinned: boolean): void {
+  positionCard(el, ctx);
   if (pinned && ctx.focusOnOpen) {
     ctx.focusOnOpen = false;
     el.querySelector<HTMLElement>(FOCUSABLE)?.focus({ preventScroll: true });

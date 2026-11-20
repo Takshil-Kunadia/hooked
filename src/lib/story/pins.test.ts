@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeBeatOf,
   copyVisibility,
+  focusTarget,
   globalIndexOf,
   hashTarget,
   keyTarget,
@@ -9,7 +10,7 @@ import {
   settleTarget,
   type ActShape,
 } from "./pins";
-import { beatScrollY, type MeasuredAct } from "./scroll";
+import { beatScrollY, type MeasuredAct, type StoryPosition } from "./scroll";
 
 const VH = 1000;
 /** hero (page hero, 1 beat), boot (2 beats), init (4 beats); 40% breathers after the hero and boot. */
@@ -139,5 +140,42 @@ describe("hashTarget", () => {
     expect(hashTarget(ACTS, "", 0, VH)).toBeNull();
     expect(hashTarget(ACTS, "#", 0, VH)).toBeNull();
     expect(hashTarget(ACTS, "#nope", 0, VH)).toBeNull();
+  });
+});
+
+describe("focusTarget", () => {
+  const at = (actIndex: number, beat: number, inBreather = false): StoryPosition => ({ actIndex, beat, inBreather });
+
+  it("takes the page to the beat holding focus in another act, whatever moved the focus", () => {
+    for (const keyboard of [true, false]) {
+      expect(focusTarget(SHAPE, at(0, 0), { actIndex: 2, beat: 2 }, keyboard)).toEqual({ actIndex: 2, beat: 2 });
+      expect(focusTarget(SHAPE, at(2, 3), { actIndex: 1, beat: 0 }, keyboard)).toEqual({ actIndex: 1, beat: 0 });
+    }
+  });
+
+  it("treats a breather as off every act, its own included", () => {
+    expect(focusTarget(SHAPE, at(2, 0, true), { actIndex: 2, beat: 1 }, false)).toEqual({ actIndex: 2, beat: 1 });
+  });
+
+  it("goes to an act's last beat for focus after its beats (Under the hood), which reading order puts last", () => {
+    expect(focusTarget(SHAPE, at(0, 0), { actIndex: 2, beat: null }, true)).toEqual({ actIndex: 2, beat: 3 });
+  });
+
+  it("follows keyboard focus to another beat of the act on screen", () => {
+    expect(focusTarget(SHAPE, at(2, 0), { actIndex: 2, beat: 3 }, true)).toEqual({ actIndex: 2, beat: 3 });
+  });
+
+  it("leaves pointer focus in the act on screen alone: clicking a word in a muted beat opens its card", () => {
+    expect(focusTarget(SHAPE, at(2, 0), { actIndex: 2, beat: 3 }, false)).toBeNull();
+  });
+
+  it("stays when focus is in the beat on screen, or after the beats of the act on screen", () => {
+    expect(focusTarget(SHAPE, at(2, 1), { actIndex: 2, beat: 1 }, true)).toBeNull();
+    expect(focusTarget(SHAPE, at(2, 1), { actIndex: 2, beat: null }, true)).toBeNull();
+  });
+
+  it("clamps a beat past the act's end, and ignores an act it doesn't know", () => {
+    expect(focusTarget(SHAPE, at(0, 0), { actIndex: 1, beat: 9 }, true)).toEqual({ actIndex: 1, beat: 1 });
+    expect(focusTarget(SHAPE, at(0, 0), { actIndex: 7, beat: 0 }, true)).toBeNull();
   });
 });
