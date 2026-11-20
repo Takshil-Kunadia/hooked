@@ -3,6 +3,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import { Layers, Raycaster, Vector2, type Camera, type Intersection, type Object3D, type Scene } from "three";
+import { pointerHover } from "@/lib/story/hover-intent";
 import { storyStore } from "@/lib/story/store";
 
 /** Objects with a hover card also live on this layer, so a pick only tests them, never the floor or lines. */
@@ -74,7 +75,7 @@ function startPicking(canvas: HTMLCanvasElement, camera: Camera, scene: Scene): 
     if (name === hovered) return;
     hovered = name;
     canvas.style.cursor = name ? HOVER_CURSOR : "";
-    storyStore.getState().hover(name);
+    pointerHover.send({ type: "anchor", name });
   };
   const flushHover = (): void => {
     frame = 0;
@@ -110,7 +111,8 @@ function startPicking(canvas: HTMLCanvasElement, camera: Camera, scene: Scene): 
       canvas.removeEventListener("click", onClick);
       if (frame !== 0) cancelAnimationFrame(frame);
       canvas.style.cursor = "";
-      if (hovered !== null && storyStore.getState().hovered === hovered) storyStore.getState().hover(null);
+      /* the map is gone: close the card its pointer opened at once, no grace */
+      if (hovered !== null) pointerHover.send({ type: "dismiss" });
     },
   };
 }
@@ -126,7 +128,8 @@ function startPicking(canvas: HTMLCanvasElement, camera: Camera, scene: Scene): 
  * canvas belong to picking: a hit pins its card, a miss unpins, so a document-level "click outside
  * closes the card" handler should skip events whose target is inside the stage (`[data-stage]`).
  *
- * Hover follows mouse and pen only (touch has no hover); a tap pins. Hover picks are coalesced to
+ * Hover follows mouse and pen only (touch has no hover), through `pointerHover`, so a card stays
+ * open while the pointer crosses onto it; a tap pins. Hover picks are coalesced to
  * one per animation frame, and repeated on every rendered frame while the pointer rests on the
  * canvas, since frames only render while something on the map moves.
  */

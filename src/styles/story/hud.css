@@ -199,7 +199,8 @@
     animation: pill-tick 0.45s ease-out;
   }
 
-  /* hover card; HookCard sets its transform. Clickable only once pinned. */
+  /* hover card; HookCard sets its transform. The pointer can rest on it (WCAG 1.4.13); closed, it
+     isn't rendered, so it never blocks 3D picking. */
   .hook-card {
     position: fixed;
     top: 0;
@@ -214,15 +215,10 @@
     color: var(--text);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
-    pointer-events: none;
     transition: opacity 0.15s;
     @starting-style {
       opacity: 0;
     }
-  }
-
-  .hook-card[data-pinned] {
-    pointer-events: auto;
   }
 
   .hook-card-name {
