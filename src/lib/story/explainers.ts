@@ -7,7 +7,10 @@ export const explainerSchema = z.object({
   kind: z.enum(["hook", "function", "file", "concept"]),
   summary: z.string().min(20),
   example: z.string().optional(),
+  /** Made up for this demo, not in core: never linked to the reference. */
   demo: z.boolean().optional(),
+  /** False when the developer.wordpress.org reference has no page for it (a theme's own functions). Default true. */
+  docs: z.boolean().optional(),
 });
 export type Explainer = z.infer<typeof explainerSchema>;
 
@@ -29,7 +32,7 @@ const PHP_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** The developer.wordpress.org reference page for a hook or function; null when there is no such page. */
 export function docsLink(e: Explainer): string | null {
-  if (!PHP_IDENTIFIER.test(e.name)) return null;
+  if (e.docs === false || e.demo === true || !PHP_IDENTIFIER.test(e.name)) return null;
   if (e.kind === "hook") return docsUrl("hooks", e.name);
   if (e.kind === "function") return docsUrl("functions", e.name);
   return null;

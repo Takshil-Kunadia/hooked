@@ -15,6 +15,12 @@ describe("explainerSchema", () => {
   it("rejects an unknown kind", () => {
     expect(explainerSchema.safeParse({ ...base, kind: "widget" }).success).toBe(false);
   });
+
+  it("accepts an optional docs flag and nothing but a boolean there", () => {
+    expect(explainerSchema.parse({ ...base, docs: false }).docs).toBe(false);
+    expect(explainerSchema.parse(base).docs).toBeUndefined();
+    expect(explainerSchema.safeParse({ ...base, docs: "no" }).success).toBe(false);
+  });
 });
 
 describe("loadExplainers", () => {
@@ -51,6 +57,17 @@ describe("docsLink", () => {
   it("has no link for files or concepts", () => {
     expect(docsLink({ ...base, kind: "file", name: "wp-settings.php" })).toBeNull();
     expect(docsLink({ ...base, kind: "concept", name: "callback" })).toBeNull();
+  });
+
+  it("has no link when the explainer says the reference has no page for it", () => {
+    expect(docsLink({ ...base, kind: "function", name: "twentytwentyfive_block_styles", docs: false })).toBeNull();
+    expect(docsLink({ ...base, kind: "hook", docs: true })).toBe(
+      "https://developer.wordpress.org/reference/hooks/init/",
+    );
+  });
+
+  it("never links a demo to the reference", () => {
+    expect(docsLink({ ...base, kind: "function", name: "hooked_demo_init", demo: true })).toBeNull();
   });
 
   it("has no link when the name is not a plain PHP identifier", () => {
