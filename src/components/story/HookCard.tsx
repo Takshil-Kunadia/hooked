@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 import { useStore } from "zustand";
 import type { CardInfo } from "@/lib/story/cards";
+import { graceMs, pointerHover } from "@/lib/story/hover-intent";
 import { placeCardNear, type Rect } from "@/lib/story/placement";
 import { storyStore, type StoryState } from "@/lib/story/store";
 import { avoidRects } from "./dom";
@@ -67,20 +75,21 @@ function followBeat(ctx: CardContext, card: HTMLElement | null, at: StoryState):
 /**
  * Delegated listeners for every `[data-card]` (copy words, board rows), plus the store links to 3D
  * picking: hovering a word highlights it in the scene, and a pick in the scene opens its card.
- * Hover follows mouse and pen only; a tap or click pins; Esc closes.
+ * Hover follows mouse and pen only, through `pointerHover` (the card stays while the pointer is on
+ * its word or on the card); a tap or click pins; Esc closes.
  */
 function bindCards(ctx: CardContext, cardRef: RefObject<HTMLDivElement | null>): () => void {
   const store = storyStore.getState;
   const onOver = (e: PointerEvent): void => {
     const hit = e.pointerType === "touch" ? null : cardHost(e.target);
-    if (!hit || store().hovered === hit[1]) return;
+    if (!hit) return;
     ctx.source = hit[0];
-    store().hover(hit[1]);
+    pointerHover.send({ type: "anchor", name: hit[1] });
   };
   const onOut = (e: PointerEvent): void => {
-    const hit = cardHost(e.target);
+    const hit = e.pointerType === "touch" ? null : cardHost(e.target);
     if (!hit || (e.relatedTarget instanceof Node && hit[0].contains(e.relatedTarget))) return;
-    if (store().hovered === hit[1]) store().hover(null);
+    pointerHover.send({ type: "anchor", name: null });
   };
   const onFocusIn = (e: FocusEvent): void => {
     const hit = cardHost(e.target);
@@ -106,6 +115,7 @@ function bindCards(ctx: CardContext, cardRef: RefObject<HTMLDivElement | null>):
   };
   const onKey = (e: KeyboardEvent): void => {
     if (e.key === "Escape" && (store().pinned ?? store().hovered) !== null) {
+      pointerHover.send({ type: "dismiss" });
       closeCard(ctx, cardRef.current);
       return;
     }
@@ -169,12 +179,22 @@ function anchorRect(anchor: Anchor | null, pointer: { x: number; y: number }): R
   return { x: at.x + POINTER_OFFSET, y: at.y + POINTER_OFFSET, w: 0, h: 0 };
 }
 
-/** Places the card beside what it points at, clear of the copy, boards and header. */
+/**
+ * Places the card beside what it points at, clear of the copy, boards and header, and gives the
+ * pointer time to cross the gap: a card pushed past the copy column waits longer.
+ */
 function positionCard(el: HTMLElement, ctx: CardContext): void {
   const viewport = { w: window.innerWidth, h: window.innerHeight };
   const anchor = anchorRect(ctx.anchor, ctx.pointer);
-  const spot = placeCardNear(anchor, { w: el.offsetWidth, h: el.offsetHeight }, viewport, avoidRects());
+  const size = { w: el.offsetWidth, h: el.offsetHeight };
+  const spot = placeCardNear(anchor, size, viewport, avoidRects());
   el.style.transform = `translate(${Math.round(spot.x)}px, ${Math.round(spot.y)}px)`;
+  pointerHover.setGrace(graceMs(anchor, { ...spot, ...size }));
+}
+
+/** The pointer on the card keeps it open (mouse and pen; a tap pins instead). */
+function onCardPointer(e: ReactPointerEvent<HTMLDivElement>): void {
+  if (e.pointerType !== "touch") pointerHover.send({ type: "card", inside: e.type === "pointerenter" });
 }
 
 /** Places the card; moves focus in if it was pinned by keyboard. */
@@ -212,6 +232,8 @@ export function HookCard({ cards, wp }: HookCardProps) {
       ref={cardRef}
       className="hook-card"
       data-pinned={pinned ? "" : undefined}
+      onPointerEnter={onCardPointer}
+      onPointerLeave={onCardPointer}
       role="dialog"
       aria-labelledby="hook-card-name"
       aria-live="polite"
