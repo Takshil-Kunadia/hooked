@@ -1,0 +1,282 @@
+/*
+ * The scroll story's acts: pins, scrim, copy, numbered beats and the step rail (src/components/story),
+ * ported from design round 5. StoryController writes `--vis` (0–1) and `data-off` on each pin, and
+ * `data-active` on its beat. Imported by globals.css, which defines the layout-mode variants.
+ */
+@layer components {
+  .story-act {
+    position: relative;
+    z-index: 10;
+    /* the 3D stage under the act still takes hover and taps; only the copy, boards and rail block it */
+    pointer-events: none;
+  }
+
+  .story-pin {
+    --vis: 1;
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    height: 100svh;
+    padding: 0 6vw 0 clamp(80px, 9vw, 150px);
+    @variant wide {
+      padding-left: 9vw;
+    }
+    @variant tablet {
+      padding-left: 72px;
+    }
+    @variant stacked {
+      align-items: flex-end;
+      padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+    }
+  }
+
+  /* desktop and tablet: an opaque scrim behind the copy column, never bare text over the scene */
+  .story-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: var(--vis);
+    background: linear-gradient(
+      90deg,
+      var(--bg) 0%,
+      var(--bg) 36%,
+      color-mix(in srgb, var(--bg) 78%, transparent) 47%,
+      transparent 62%
+    );
+    @variant tablet {
+      background: linear-gradient(
+        90deg,
+        var(--bg) 0%,
+        var(--bg) 46%,
+        color-mix(in srgb, var(--bg) 78%, transparent) 56%,
+        transparent 70%
+      );
+    }
+    @variant stacked {
+      display: none;
+    }
+  }
+
+  .story-copy {
+    max-width: 540px;
+    pointer-events: auto;
+    opacity: var(--vis);
+    @variant wide {
+      max-width: 580px;
+    }
+    @variant tablet {
+      max-width: 42vw;
+    }
+    /* stacked: the copy is a frosted bottom sheet over the scene */
+    @variant stacked {
+      width: 100%;
+      max-width: none;
+      padding: 18px 18px 20px;
+      border: 1px solid var(--hairline);
+      border-radius: 24px;
+      background: var(--panel-strong);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+    }
+  }
+
+  .story-pin[data-off] :is(.story-copy, .story-scrim) {
+    visibility: hidden;
+  }
+
+  .story-copy-body {
+    translate: 0 calc((1 - var(--vis)) * 22px);
+  }
+
+  .story-kicker {
+    margin-bottom: 18px;
+    font-family: var(--font-departure-mono), ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    @variant stacked {
+      display: none;
+    }
+  }
+
+  .story-copy h2 {
+    margin-bottom: 26px;
+    font-size: clamp(38px, 6.2vw, 98px);
+    font-weight: 700;
+    line-height: 0.98;
+    letter-spacing: -0.038em;
+    color: var(--text);
+    @variant stacked {
+      margin-bottom: 12px;
+    }
+  }
+
+  .story-beats {
+    display: grid;
+    gap: 16px;
+    list-style: none;
+  }
+
+  /* inactive beats are --muted (no opacity); the active one is --text-2 with a --text lead-in */
+  .story-beats > li {
+    position: relative;
+    padding-left: 40px;
+    font-size: clamp(18px, 1.35vw, 21px);
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: -0.012em;
+    color: var(--muted);
+    transition: color 0.3s;
+    @variant stacked {
+      font-size: 17px;
+    }
+  }
+
+  .story-beats > li :is(b, strong) {
+    font-weight: 600;
+  }
+
+  .story-beats > li::before {
+    /* the number is in the markup: stacked layouts hide the other beats, so a counter would read 1 */
+    content: attr(data-n);
+    position: absolute;
+    top: 0.15em;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1.5px solid var(--muted);
+    border-radius: 50%;
+    font-family: var(--font-departure-mono), ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .story-beats > li[data-active] {
+    color: var(--text-2);
+  }
+
+  .story-beats > li[data-active] :is(b, strong) {
+    color: var(--text);
+  }
+
+  .story-beats > li[data-active]::before {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  /* stacked: only the active beat shows */
+  .story-beats > li:not([data-active]) {
+    @variant stacked {
+      display: none;
+    }
+  }
+
+  .story-copy-body code {
+    padding: 0.08em 0.38em;
+    border-radius: 7px;
+    background: var(--hairline);
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.85em;
+  }
+
+  [data-card] {
+    cursor: help;
+  }
+
+  code[data-card] {
+    border-bottom: 1.5px dashed var(--accent);
+    border-radius: 7px 7px 0 0;
+  }
+
+  /* the step rail: ticks on the left, labels on hover or focus; labels hidden on tablet, rail on phones */
+  .story-rail {
+    position: fixed;
+    top: 50%;
+    left: 20px;
+    z-index: 20;
+    translate: 0 -50%;
+    @variant stacked {
+      display: none;
+    }
+  }
+
+  .story-rail ol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+
+  .story-rail button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 40px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .story-rail i {
+    display: block;
+    width: 10px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--muted);
+    transition:
+      width 0.3s,
+      background-color 0.3s;
+  }
+
+  .story-rail [aria-current] i {
+    width: 26px;
+    background: var(--text);
+  }
+
+  .story-rail span {
+    position: absolute;
+    top: 50%;
+    left: 40px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--panel-strong);
+    font-family: var(--font-departure-mono), ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--text);
+    opacity: 0;
+    translate: 0 -50%;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+
+  .story-rail button:is(:hover, :focus-visible) span {
+    opacity: 1;
+    @variant tablet {
+      opacity: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-copy-body {
+    translate: none;
+  }
+}
+
+/* a phone on its side is too short for every beat: show only the active one, as the stacked sheet does */
+@media (orientation: landscape) and (max-height: 560px) {
+  .story-beats > li:not([data-active]),
+  .story-kicker {
+    display: none;
+  }
+
+  .story-copy h2 {
+    margin-bottom: 12px;
+  }
+}
