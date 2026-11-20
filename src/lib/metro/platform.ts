@@ -37,13 +37,13 @@ function lineEdge(id: string): { x: number; half: number } {
 }
 
 /**
- * The slab fills the gap between the drop-ins feeder (it bends away to the left as it nears the
+ * The slab fills the gap between the theme feeder (it bends away to the left as it nears the
  * main line, so its straight stretch is its closest point) and the depot spur.
  */
 export function initPlatformLayout(count: number): PlatformLayout {
-  const dropins = lineEdge("dropins");
+  const theme = lineEdge("theme");
   const spur = lineEdge("depot");
-  const left = dropins.x + dropins.half + CLEARANCE;
+  const left = theme.x + theme.half + CLEARANCE;
   const right = spur.x - spur.half - CLEARANCE;
   const width = right - left;
   const x = (left + right) / 2;

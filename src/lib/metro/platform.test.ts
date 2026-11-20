@@ -9,12 +9,12 @@ const line = (id: string) => {
 };
 
 describe("initPlatformLayout", () => {
-  const dropins = line("dropins");
+  const theme = line("theme");
   const spur = line("depot");
 
   it("fits the slab between the drop-ins feeder and the depot spur, touching neither", () => {
     const p = initPlatformLayout(8);
-    expect(p.x - p.width / 2).toBeGreaterThan(dropins.x + dropins.half);
+    expect(p.x - p.width / 2).toBeGreaterThan(theme.x + theme.half);
     expect(p.x + p.width / 2).toBeLessThan(spur.x - spur.half);
     expect(p.z - p.depth / 2).toBeGreaterThan(0.5);
   });

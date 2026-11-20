@@ -72,6 +72,16 @@ describe("map data", () => {
     }
   });
 
+  it("feeders join in the order wp-settings.php loads them: drop-ins, mu-plugins, plugins, theme", () => {
+    const joinX = (origin: string) => {
+      const line = FEEDER_LINES.find((l) => l.kind === "feeder" && l.origin === origin)!;
+      return line.points[line.points.length - 1]![0];
+    };
+    const order = ["dropin", "mu", "plugin", "theme"];
+    const byJoin = [...order].sort((a, b) => joinX(a) - joinX(b));
+    expect(byJoin).toEqual(order);
+  });
+
   it("the depot spur starts on the main line near WP_Query", () => {
     const spur = FEEDER_LINES.find((l) => l.id === "depot")!;
     const [x, z] = spur.points[0]!;

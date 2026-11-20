@@ -131,36 +131,11 @@ export function stationById(id: StationId): Station {
 export const DEPOT = { x: 4.4, z: 4.6 } as const;
 
 export const FEEDER_LINES: ReadonlyArray<LineSpec> = [
+  /* left to right = the order wp-settings.php loads them: drop-ins, mu-plugins, plugins, theme */
   {
-    id: "plugins",
+    id: "dropins",
     kind: "feeder",
-    origin: "plugin",
-    points: [
-      [-4.9, 5.4],
-      [-4.9, 1.8],
-      [-3.7, 0.45],
-    ],
-    cornerRadius: 0.7,
-    width: 0.32,
-    segments: 160,
-  },
-  {
-    id: "theme",
-    kind: "feeder",
-    origin: "theme",
-    points: [
-      [-1.7, 5.4],
-      [-1.7, 1.8],
-      [-2.9, 0.45],
-    ],
-    cornerRadius: 0.7,
-    width: 0.32,
-    segments: 160,
-  },
-  {
-    id: "mu",
-    kind: "feeder",
-    origin: "mu",
+    origin: "dropin",
     points: [
       [-6.1, 5.4],
       [-6.1, 1.8],
@@ -171,9 +146,35 @@ export const FEEDER_LINES: ReadonlyArray<LineSpec> = [
     segments: 160,
   },
   {
-    id: "dropins",
+    id: "mu",
     kind: "feeder",
-    origin: "dropin",
+    origin: "mu",
+    points: [
+      [-4.9, 5.4],
+      [-4.9, 1.8],
+      [-3.7, 0.45],
+    ],
+    cornerRadius: 0.7,
+    width: 0.32,
+    segments: 160,
+  },
+  {
+    id: "plugins",
+    kind: "feeder",
+    origin: "plugin",
+    points: [
+      [-1.7, 5.4],
+      [-1.7, 1.8],
+      [-2.9, 0.45],
+    ],
+    cornerRadius: 0.7,
+    width: 0.32,
+    segments: 160,
+  },
+  {
+    id: "theme",
+    kind: "feeder",
+    origin: "theme",
     points: [
       [-0.5, 5.4],
       [-0.5, 1.8],
