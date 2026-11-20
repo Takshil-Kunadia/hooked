@@ -2,9 +2,9 @@
 
 import { useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo } from "react";
-import { Vector3, type CurvePath, type Material } from "three";
+import type { CurvePath, Material, Vector3 } from "three";
 import { ORIGIN_COLOURS } from "@/lib/design/tokens";
-import { buildTransitPath, extendStart, nearestParam } from "@/lib/geometry/transit";
+import { buildTransitPath, nearestParam } from "@/lib/geometry/transit";
 import { FEEDER_LINES, MAIN_LINE, STATIONS, type LineSpec, type Origin, type StationId } from "@/lib/metro/route";
 import type { FocusId } from "@/lib/story/chapter";
 import { toneCompensatedCss, type Palette } from "../palette";
@@ -14,21 +14,15 @@ import { MapLabel } from "./MapLabel";
 import { MetroLine } from "./MetroLine";
 import { StationMarker } from "./StationMarker";
 import { LABEL_LAYER, useLabelFonts, type LabelFonts, type LabelStyle } from "./labels";
+import { linePoints, mainLinePath } from "./mainLine";
 import { useMapMaterials, type MapMaterials } from "./materials";
 
-/**
- * `browser` sits on the main line's very first point. Starting the drawn line a little earlier
- * keeps its marker on the line instead of hanging past the rounded end (the data stays put).
- */
-const MAIN_START_EXTENSION = 0.6;
 /** Station labels sit this far behind (labelSide -1) or in front of (1) the line. */
 const STATION_LABEL_OFFSET = 1.75;
 const FEATURED_LABEL_SIZE = 1.15;
 
 /** The hero overview's focus: every label on the map. */
 export const OVERVIEW_FOCUS: ReadonlyArray<FocusId> = [...STATIONS.map((s) => s.id), "feeders", "depot"];
-
-const toPoints = (spec: LineSpec): Vector3[] => spec.points.map(([x, z]) => new Vector3(x, 0, z));
 
 function lineMaterial(spec: LineSpec, m: MapMaterials): Material {
   if (spec.kind === "main") return m.line;
@@ -68,22 +62,21 @@ interface MetroMapProps {
   readonly focus: ReadonlyArray<FocusId>;
   /** The stop the story is at, outlined in blue. */
   readonly current?: StationId | null;
+  /** The card the hover/pinned card names, if any: its station or the depot is highlighted. */
+  readonly highlighted?: string | null;
   readonly palette: Palette;
 }
 
-/** The static map: lines, station markers, labels printed on the floor and the depot. */
-export function MetroMap({ focus, current = null, palette }: MetroMapProps) {
+/** The map: lines, station markers, labels printed on the floor and the depot. */
+export function MetroMap({ focus, current = null, highlighted = null, palette }: MetroMapProps) {
   const camera = useThree((s) => s.camera);
   const anisotropy = useThree((s) => s.gl.capabilities.getMaxAnisotropy());
   const materials = useMapMaterials(palette);
   const fonts = useLabelFonts();
 
-  const mainPath = useMemo(
-    () => buildTransitPath(extendStart(toPoints(MAIN_LINE), MAIN_START_EXTENSION), MAIN_LINE.cornerRadius),
-    [],
-  );
+  const mainPath = mainLinePath();
   const feeders = useMemo(
-    () => FEEDER_LINES.map((spec) => ({ spec, path: buildTransitPath(toPoints(spec), spec.cornerRadius) })),
+    () => FEEDER_LINES.map((spec) => ({ spec, path: buildTransitPath(linePoints(spec), spec.cornerRadius) })),
     [],
   );
   const yaws = useMemo(() => STATIONS.map((s) => markerYaw(mainPath, s.x, s.z)), [mainPath]);
@@ -115,6 +108,8 @@ export function MetroMap({ focus, current = null, palette }: MetroMapProps) {
           len={s.len}
           yaw={yaws[i] ?? 0}
           current={s.id === current}
+          highlighted={s.card === highlighted}
+          card={s.card}
           materials={materials}
         />
       ))}
@@ -132,7 +127,12 @@ export function MetroMap({ focus, current = null, palette }: MetroMapProps) {
           />
         ))}
       {styles && <FeederLabels styles={styles.feeder} visible={shown.has("feeders")} />}
-      <Depot materials={materials} labelStyle={styles?.station ?? null} labelVisible={shown.has("depot")} />
+      <Depot
+        materials={materials}
+        labelStyle={styles?.station ?? null}
+        labelVisible={shown.has("depot")}
+        highlighted={highlighted}
+      />
     </group>
   );
 }

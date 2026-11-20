@@ -5,7 +5,7 @@ import type { CurvePath, Material, Vector3 } from "three";
 import { endCapGeometry, ribbonGeometry } from "@/lib/geometry/transit";
 
 /** Height of every line on the map (round 5's LINE_H). */
-const LINE_HEIGHT = 0.12;
+export const LINE_HEIGHT = 0.12;
 
 interface MetroLineProps {
   readonly path: CurvePath<Vector3>;
