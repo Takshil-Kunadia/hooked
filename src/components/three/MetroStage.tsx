@@ -9,6 +9,7 @@ import { findBeat, flattenBeats, type BeatSpec, type ChapterSpec, type FlatBeat 
 import { cueIndices } from "@/lib/story/cues";
 import type { Ticket } from "@/lib/story/facts";
 import type { LayoutMode } from "@/lib/story/layout";
+import { linkedCard } from "@/lib/story/linked";
 import { storyStore } from "@/lib/story/store";
 import { CameraRig } from "./CameraRig";
 import { Effects } from "./Effects";
@@ -65,7 +66,7 @@ interface StageSceneProps {
 function StageScene({ chapter, tickets }: StageSceneProps) {
   const palette = usePalette();
   const layout = useStore(storyStore, (s) => s.layout);
-  const highlighted = useStore(storyStore, (s) => s.pinned ?? s.hovered);
+  const highlighted = useStore(storyStore, linkedCard);
   const flat = useMemo(() => (chapter ? flattenBeats(chapter) : NO_BEATS), [chapter]);
   const cues = useMemo(() => cueIndices(flat), [flat]);
   const beat = useCurrentBeat(flat);

@@ -6,6 +6,7 @@ import { initBoardStatus, ticketStatus } from "@/lib/story/board";
 import type { BeatSpec } from "@/lib/story/chapter";
 import { initPhases, initSettled, sinceArrival, type CueIndices } from "@/lib/story/cues";
 import type { Ticket } from "@/lib/story/facts";
+import { isLinked, linkedCard } from "@/lib/story/linked";
 import { storyStore } from "@/lib/story/store";
 import { trainScreen } from "@/lib/story/train-screen";
 
@@ -24,6 +25,7 @@ interface InitBoardProps {
 /**
  * The init platform's board: the announcement and every ticket's turn, from the same cue function
  * as the 3D platform (cues.ts), so the two never disagree. Ticks only while something is playing.
+ * A row whose callback's card is open anywhere (a ticket hovered on the map) is `data-linked`.
  */
 function InitBoard({ cues, tickets, hidden }: InitBoardProps) {
   const titleId = useId();
@@ -31,6 +33,7 @@ function InitBoard({ cues, tickets, hidden }: InitBoardProps) {
   const enteredAt = useStore(storyStore, (s) => s.enteredAt);
   const fromLater = useStore(storyStore, (s) => s.fromLater);
   const arrivedAtS = useStore(trainScreen, (s) => s.arrivedAtS);
+  const linked = useStore(storyStore, linkedCard);
   const [nowS, setNowS] = useState(0);
   const moment = { cues, globalIndex, sinceArrivalS: sinceArrival(arrivedAtS, enteredAt, nowS), fromLater };
   const settled = initSettled(moment, tickets.length);
@@ -70,7 +73,13 @@ function InitBoard({ cues, tickets, hidden }: InitBoardProps) {
           {tickets.map((t, i) => {
             const phase = phases.tickets[i] ?? "waiting";
             return (
-              <tr key={`${t.callback}/${i}`} data-card={t.callback} data-phase={phase} tabIndex={0}>
+              <tr
+                key={`${t.callback}/${i}`}
+                data-card={t.callback}
+                data-phase={phase}
+                data-linked={isLinked(t.callback, linked) ? "" : undefined}
+                tabIndex={0}
+              >
                 <td className="tk">{t.priority}</td>
                 <td className="nm">{t.callback}</td>
                 <td className={`fr o-${t.origin}`}>
@@ -90,6 +99,7 @@ function InitBoard({ cues, tickets, hidden }: InitBoardProps) {
 /** A selection of the announcements wp-settings.php makes while booting, in the order they fire. */
 function AnnouncementBoard({ names, total }: { readonly names: ReadonlyArray<string>; readonly total: number }) {
   const titleId = useId();
+  const linked = useStore(storyStore, linkedCard);
   return (
     <div className="board" role="group" aria-labelledby={titleId} data-card-avoid="">
       <p className="board-title">
@@ -108,7 +118,13 @@ function AnnouncementBoard({ names, total }: { readonly names: ReadonlyArray<str
         </thead>
         <tbody>
           {names.map((name, i) => (
-            <tr key={name} data-card={name} data-phase="done" tabIndex={0}>
+            <tr
+              key={name}
+              data-card={name}
+              data-phase="done"
+              data-linked={isLinked(name, linked) ? "" : undefined}
+              tabIndex={0}
+            >
               <td className="tk">{i + 1}</td>
               <td className="nm">{name}</td>
               <td className="st">{ticketStatus("done")}</td>

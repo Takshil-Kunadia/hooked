@@ -119,6 +119,21 @@
     background: rgb(255 255 255 / 0.08);
   }
 
+  /* its card is open (a ticket hovered on the map, a word in the copy): a bar and an underline, not
+     only a tint */
+  .board tbody tr[data-linked] {
+    background: rgb(255 255 255 / 0.12);
+  }
+
+  .board tr[data-linked] td:first-child {
+    box-shadow: inset 3px 0 0 var(--led);
+  }
+
+  .board tr[data-linked] .nm {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   .board .tk {
     font-size: 15px;
     color: var(--led);

@@ -204,6 +204,14 @@
     border-radius: 7px 7px 0 0;
   }
 
+  /* its card is open (from this word, another, a board row or the map): a solid, thicker underline,
+     never colour alone */
+  code[data-card][data-linked] {
+    border-bottom: 2.5px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 16%, var(--hairline));
+    color: var(--text);
+  }
+
   /* "Under the hood": the act's hooks for developers, after the beats, closed until asked for */
   .story-hood {
     margin-top: 22px;
