@@ -67,13 +67,19 @@ function shownAt(el: Element, at: Pick<StoryState, "actId" | "beat">): boolean {
   return li === null || Array.from(li.parentElement?.children ?? []).indexOf(li) === at.beat;
 }
 
+/** The copy word or board row holding keyboard focus, if it is where the story is now. */
+function focusedWordAt(at: StoryState): Element | null {
+  const el = document.activeElement;
+  return el && cardHost(el)?.[0] === el && el.matches(":focus-visible") && shownAt(el, at) ? el : null;
+}
+
 /**
- * The beat moved on: a word's card closes, unless that word holds focus and is now on screen. Focus
- * moving into another beat scrolls the page there (StoryController), so its card opens on arrival.
+ * The beat moved on: a word's card closes, unless that word holds keyboard focus and is now on
+ * screen. Tabbing into another beat scrolls the page there (StoryController), so its card opens on
+ * arrival. (A tapped word keeps focus too, but its card stays closed when the reader scrolls back.)
  */
 function followBeat(ctx: CardContext, card: HTMLElement | null, at: StoryState): void {
-  const focused = document.activeElement;
-  const word = focused && cardHost(focused)?.[0] === focused && shownAt(focused, at) ? focused : null;
+  const word = focusedWordAt(at);
   if (ctx.anchor instanceof Element && ctx.anchor !== word) closeCard(ctx, card);
   const name = word?.getAttribute("data-card");
   const s = storyStore.getState();
