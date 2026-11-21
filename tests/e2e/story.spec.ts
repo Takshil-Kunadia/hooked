@@ -128,7 +128,7 @@ test.describe("the story", () => {
     await expect(items).toHaveCount(BEATS.length);
     await expect(items.last()).toHaveAttribute("aria-current", "step");
     await page.keyboard.press("ArrowDown");
-    await expectBeat(page, "next/0");
+    await expectBeat(page, "back/2");
   });
 
   test("space on a focused summary toggles it", async ({ page }, testInfo) => {
@@ -273,7 +273,7 @@ const SHOT_VIEWPORTS = [
   { width: 1440, height: 900 },
   { width: 1920, height: 1080 },
 ] as const;
-const ACTS = ["hero", "before", "boot", "init", "next"] as const;
+const ACTS = ["hero", "before", "boot", "init", "main", "template", "render", "back"] as const;
 
 for (const viewport of SHOT_VIEWPORTS) {
   test(`screenshots of every act at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {

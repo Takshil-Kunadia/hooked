@@ -116,12 +116,107 @@ export const CHAPTER_1_COPY: Readonly<Record<string, BeatCopy>> = {
     </>
   ),
 
-  /* Next stop */
-  next: (
+  /* Finding your post · WP::main() */
+  parse: ({ request }: StoryData) => (
     <>
-      <b>Next, WordPress works out what you asked for.</b> Its main routine, <code>WP::main()</code>, reads the address
-      and fetches your post from the depot. Then a junction picks the template, and a filter workshop polishes the
-      title.
+      <b>
+        <code>WP::main()</code> reads the address.
+      </b>{" "}
+      Rewrite rules turn <code>{request.path}</code> into a question WordPress can answer, such as &ldquo;the post with
+      this name&rdquo;. Then it announces <Hook name="parse_request" />.
+    </>
+  ),
+  query: (
+    <>
+      <b>Next, a query.</b> <Hook name="WP_Query" /> turns that question into a database query. Just before it runs,
+      WordPress announces <Hook name="pre_get_posts" />, so a plugin can still change what gets fetched.
+    </>
+  ),
+  depot: (
+    <>
+      <b>The query goes to the depot.</b> The database sends your post back. The list of posts then passes through{" "}
+      <Hook name="the_posts" />, a filter: plugins can change the list before anyone sees it.
+    </>
+  ),
+  wp: (
+    <>
+      <b>WordPress knows what to show.</b> It sends the response headers, then announces <Hook name="wp" />: the address
+      is read and the post fetched, and nothing has been drawn yet.
+    </>
+  ),
+
+  /* The junction · template-loader.php */
+  redirect: (
+    <>
+      <b>
+        The junction starts with <Hook name="template_redirect" />.
+      </b>{" "}
+      Before any of the page is drawn, plugins get a last chance to send you somewhere else, such as from an old address
+      to a new one.
+    </>
+  ),
+  hierarchy: (
+    <>
+      <b>Which file draws a post?</b> At the <Hook name="template" /> junction, WordPress walks the template hierarchy
+      from the most specific file to the most general, and takes the first one the theme has.
+    </>
+  ),
+  include: (
+    <>
+      <b>
+        The chosen file passes through <Hook name="template_include" />,
+      </b>{" "}
+      a filter, so a plugin can swap in a file of its own. Then WordPress loads it, and the drawing starts.
+    </>
+  ),
+
+  /* The workshop · drawing the page */
+  blocks: (
+    <>
+      <b>The template runs, block by block.</b> A block theme draws its blocks before anything else, so each can ask for
+      the styles and scripts it needs. The post&apos;s title and its content are blocks too.
+    </>
+  ),
+  filter: (
+    <>
+      <b>Every title passes through a filter.</b> <Hook name="apply_filters" /> hands it to each function signed up on{" "}
+      <Hook name="the_title" /> with <Hook name="add_filter" />. Each may change it, and must hand it back.
+    </>
+  ),
+  content: (
+    <>
+      <b>The post&apos;s content takes a longer line.</b> <Hook name="the_content" /> runs a chain of filters in
+      priority order: blocks become HTML, straight quotes turn curly, shortcodes run.
+    </>
+  ),
+  assemble: (
+    <>
+      <b>Then the page is put together.</b> <Hook name="wp_head" /> prints what the blocks asked for into the
+      page&apos;s head, and <Hook name="wp_footer" /> adds the scripts held back for the end.
+    </>
+  ),
+
+  /* Back to your browser */
+  sent: ({ status }: StoryData) => (
+    <>
+      <b>The page goes back to your browser.</b> It arrives as HTML, with the status code {status}. Your browser draws
+      it, and fetches the styles, scripts and images it names.
+    </>
+  ),
+  shutdown: (
+    <>
+      <b>
+        Lights out: <Hook name="shutdown" />.
+      </b>{" "}
+      The very last announcement, as PHP finishes. Everything WordPress set up for this visit is forgotten; the next
+      visit starts again at the front door.
+    </>
+  ),
+  again: (
+    <>
+      <b>That was one visit.</b> Every page view rides this whole line, firing hundreds of hooks on the way.{" "}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a plain link keeps next/link's runtime (~3 KB gz) out of the route's JS budget */}
+      <a href="/map">See every one of them on the map</a>.
     </>
   ),
 };
