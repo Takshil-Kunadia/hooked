@@ -81,7 +81,20 @@ describe("Chapter 1 spec", () => {
       "init announce init platform init init announce",
       "init tickets init platform init - cascade",
       "init loaded init platform - - -",
-      "next next init overview - - -",
+      "main parse query station - - -",
+      "main query query station - - -",
+      "main depot query depot - - -",
+      "main wp query station - - -",
+      "template redirect template station - - -",
+      "template hierarchy template station - - -",
+      "template include template station - - -",
+      "render blocks the_title station - - -",
+      "render filter the_title station - - -",
+      "render content the_title station - - -",
+      "render assemble the_title station - - -",
+      "back sent response station - response -",
+      "back shutdown response station - - -",
+      "back again response overview - - -",
     ]);
   });
 
@@ -171,8 +184,14 @@ describe("Under the hood", () => {
     expect(initNames).toEqual(firedOrder(trace, initNames));
   });
 
-  it("is left out where no hooks fire yet, and after the last one", () => {
-    expect([rowsByAct.before, rowsByAct.next]).toEqual([[], []]);
+  it("is left out where no hooks fire yet", () => {
+    expect(rowsByAct.before).toEqual([]);
+  });
+
+  it("lists the rest of the trip's hooks in the order they fired, ending with shutdown", () => {
+    const rest = ["main", "template", "render", "back"].flatMap((id) => rowsByAct[id]?.map((r) => r.name) ?? []);
+    expect(rest).toEqual(firedOrder(trace, rest));
+    expect(rest.at(-1)).toBe("shutdown");
   });
 });
 

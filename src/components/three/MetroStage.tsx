@@ -1,7 +1,7 @@
 "use client";
 
-import { Canvas, useThree } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NeutralToneMapping } from "three";
 import { useStore } from "zustand";
 import { CAMERA } from "@/lib/story/camera";
@@ -10,13 +10,14 @@ import { cueIndices } from "@/lib/story/cues";
 import type { Ticket } from "@/lib/story/facts";
 import type { LayoutMode } from "@/lib/story/layout";
 import { linkedCard } from "@/lib/story/linked";
+import { DARK_TEXT_FROM, beatMood, easeMood } from "@/lib/story/mood";
 import { storyStore } from "@/lib/story/store";
 import { CameraRig } from "./CameraRig";
 import { Effects } from "./Effects";
 import { Lighting } from "./Lighting";
 import { InitPlatform } from "./map/InitPlatform";
 import { MetroMap, OVERVIEW_FOCUS } from "./map/MetroMap";
-import { fogScale, usePalette } from "./palette";
+import { fogScale, moodPalette, usePaletteId } from "./palette";
 import { Train } from "./Train";
 import { usePicking } from "./usePicking";
 
@@ -37,6 +38,46 @@ const RESIZE_OPTIONS = { scroll: false } as const;
 /** Round 5 caps phones at 1.5× so MSAA ×4 and the post passes stay smooth. */
 const MAX_DPR: Readonly<Record<LayoutMode, number>> = { stacked: 1.5, tablet: 2, desktop: 2, wide: 2 };
 const NO_BEATS: ReadonlyArray<FlatBeat> = [];
+/** The light changes in steps this small, so the scene isn't rebuilt every frame. */
+const MOOD_STEP = 0.05;
+/** How quickly the light follows the story, per second (exponential). */
+const MOOD_RATE = 1.8;
+
+/**
+ * Eases the lighting towards the current beat's mood, a step at a time, asking for frames until
+ * it arrives. Reduced motion jumps straight there.
+ */
+function useMood(goal: number, reducedMotion: boolean): number {
+  const invalidate = useThree((s) => s.invalidate);
+  const [shown, setShown] = useState(goal);
+  const value = useRef(goal);
+  useEffect(() => invalidate(), [goal, invalidate]);
+  useFrame((_, delta) => {
+    const k = reducedMotion ? 1 : 1 - Math.exp(-MOOD_RATE * Math.min(delta, 0.1));
+    const next = easeMood(value.current, goal, k, MOOD_STEP);
+    value.current = next.value;
+    if (Math.abs(next.shown - shown) > MOOD_STEP / 2) setShown(next.shown);
+    if (Math.abs(goal - next.value) > MOOD_STEP / 4) invalidate();
+  });
+  return shown;
+}
+
+/** The page follows the scene's light: its background, and dark text colours once the scene is dark. */
+function usePageLight(mood: number, bg: string): void {
+  useEffect(() => {
+    const html = document.documentElement;
+    html.dataset.scene = mood >= DARK_TEXT_FROM ? "dark" : "light";
+    html.style.setProperty("--bg", bg);
+  }, [mood, bg]);
+  useEffect(
+    () => () => {
+      const html = document.documentElement;
+      delete html.dataset.scene;
+      html.style.removeProperty("--bg");
+    },
+    [],
+  );
+}
 
 /** The chapter's current beat, or null without a chapter (the hero overview). */
 function useCurrentBeat(flat: ReadonlyArray<FlatBeat>): BeatSpec | null {
@@ -64,19 +105,23 @@ interface StageSceneProps {
 }
 
 function StageScene({ chapter, tickets }: StageSceneProps) {
-  const palette = usePalette();
+  const dark = usePaletteId() === "dusk";
   const layout = useStore(storyStore, (s) => s.layout);
+  const reducedMotion = useStore(storyStore, (s) => s.reducedMotion);
   const highlighted = useStore(storyStore, linkedCard);
   const flat = useMemo(() => (chapter ? flattenBeats(chapter) : NO_BEATS), [chapter]);
   const cues = useMemo(() => cueIndices(flat), [flat]);
   const beat = useCurrentBeat(flat);
+  const mood = useMood(beatMood(beat, dark), reducedMotion);
+  const palette = useMemo(() => moodPalette(mood), [mood]);
+  usePageLight(mood, palette.bg);
   useInvalidateOnStory();
   usePicking();
 
   return (
     <>
       <CameraRig beat={beat} layout={layout} />
-      <Lighting palette={palette} fogScale={fogScale(CAMERA[layout].overview.dist)} />
+      <Lighting palette={palette} fogScale={fogScale(CAMERA[layout].overview.dist)} sky />
       <MetroMap
         focus={beat?.focus ?? OVERVIEW_FOCUS}
         current={beat?.station ?? null}

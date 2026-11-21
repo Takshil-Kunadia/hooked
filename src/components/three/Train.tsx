@@ -72,7 +72,7 @@ interface CarProps {
   readonly lead: boolean;
 }
 
-function Car({ ref, parts, lead }: CarProps) {
+export function Car({ ref, parts, lead }: CarProps) {
   return (
     <group ref={ref}>
       <mesh geometry={parts.body} material={parts.bodyMaterial} position-y={BODY.y} castShadow receiveShadow />

@@ -26,7 +26,8 @@ function pillShape(len: number, wid: number): Shape {
   return s;
 }
 
-const pill = (len: number, wid: number, depth: number): ExtrudeGeometry =>
+/** A flat pill (shape in x/y, extruded along z); lay it down with rotation-x -π/2. */
+export const pill = (len: number, wid: number, depth: number): ExtrudeGeometry =>
   new ExtrudeGeometry(pillShape(len, wid), { depth, ...BEVEL });
 
 interface StationMarkerProps {

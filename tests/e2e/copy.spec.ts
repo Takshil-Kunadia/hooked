@@ -42,7 +42,7 @@ test.describe("the copy", () => {
         ],
       })),
     );
-    expect(expected.map((a) => a.act)).toEqual(["before", "boot", "init", "next"]);
+    expect(expected.map((a) => a.act)).toEqual(["before", "boot", "init", "main", "template", "render", "back"]);
     for (const { act, texts } of expected) {
       for (const text of texts) expect(snapshot, `${act}: ${text}`).toContain(text.slice(0, 40));
     }

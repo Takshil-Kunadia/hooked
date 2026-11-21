@@ -3,6 +3,7 @@
 /* the scroll story (src/components/story); its rules use the layout-mode variants defined below */
 @import "../styles/story/acts.css";
 @import "../styles/story/hud.css";
+@import "../styles/lifecycle.css";
 
 /*
  * Tailwind reads the design tokens below. The source of truth for every value
@@ -15,6 +16,7 @@
   --color-muted: var(--muted);
   --color-hairline: var(--hairline);
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
   --color-core: var(--core);
   --color-plugin: var(--plugin);
   --color-theme: var(--theme);

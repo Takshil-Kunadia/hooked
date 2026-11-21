@@ -32,6 +32,15 @@ export default async function Home() {
             Every page visit is a trip. Ride along with one request as it travels through WordPress, stop by stop, and
             comes back as a web page.
           </p>
+          <p className="mt-6">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a plain link keeps next/link's runtime (~3 KB gz) out of the route's JS budget; a full load suits a 3D page */}
+            <a
+              href="/map"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 text-[15px] font-semibold text-on-accent"
+            >
+              See every hook on the map <span aria-hidden="true">→</span>
+            </a>
+          </p>
         </div>
       </section>
       <Story spec={CHAPTER_1} copy={CHAPTER_1_COPY} data={data} explainers={explainers} />

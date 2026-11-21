@@ -169,6 +169,71 @@
       "kind": "function",
       "summary": "From the Twenty Twenty-Five theme: registers a block binding source, Post format name, so a block can show the post's format, such as Gallery or Quote.",
       "docs": false
+    },
+    {
+      "name": "parse_request",
+      "kind": "hook",
+      "summary": "An action that fires once WordPress has read the address and worked out what you are asking for. A plugin can look at the request, or change it, here.",
+      "example": "add_action( 'parse_request', 'my_plugin_router' );"
+    },
+    {
+      "name": "pre_get_posts",
+      "kind": "hook",
+      "summary": "Fires just before a query asks the database for posts, with the query passed in. A plugin can change it, for example to show more posts on each page.",
+      "example": "add_action( 'pre_get_posts', 'my_plugin_adjust_query' );"
+    },
+    {
+      "name": "the_posts",
+      "kind": "hook",
+      "summary": "A filter on the list of posts a query fetched, right after the database answers. Plugins can add to the list, remove from it or change it."
+    },
+    {
+      "name": "wp",
+      "kind": "hook",
+      "summary": "Fires once WordPress has read the address, fetched what it asked for and sent the headers, before a template is chosen. Plugins that need to know which page this is can start here."
+    },
+    {
+      "name": "template_redirect",
+      "kind": "hook",
+      "summary": "Fires just before WordPress chooses a template, while nothing has been drawn yet. Plugins use it to send visitors somewhere else, such as from an old address to a new one.",
+      "example": "add_action( 'template_redirect', 'my_plugin_redirects' );"
+    },
+    {
+      "name": "template_include",
+      "kind": "hook",
+      "summary": "A filter on the path of the template file WordPress chose to draw the page. A plugin can return a different file instead."
+    },
+    {
+      "name": "wp_head",
+      "kind": "hook",
+      "summary": "Fires inside the page's head. WordPress prints styles, scripts, the title and other tags here, and plugins add their own."
+    },
+    {
+      "name": "the_content",
+      "kind": "hook",
+      "summary": "A filter on a post's content before it is shown. WordPress renders blocks, curls quotes and runs shortcodes through it, each a function with its own priority."
+    },
+    {
+      "name": "wp_footer",
+      "kind": "hook",
+      "summary": "Fires at the end of the page, just before it closes. Scripts held back for the footer are printed here."
+    },
+    {
+      "name": "shutdown",
+      "kind": "hook",
+      "summary": "The last action of every request, fired as PHP finishes. Plugins use it for work that can wait until the page is done, such as writing a log."
+    },
+    {
+      "name": "apply_filters",
+      "kind": "function",
+      "summary": "Runs a filter: it passes a value through every function signed up for that hook, lowest priority first, and hands back what comes out.",
+      "example": "// how WordPress filters a title before a theme shows it\n$title = apply_filters( 'the_title', $title, $post_id );"
+    },
+    {
+      "name": "add_filter",
+      "kind": "function",
+      "summary": "Signs a function up for a filter. The function gets the value, may change it, and must return it.",
+      "example": "add_filter( 'the_title', 'my_plugin_title', 10, 2 );"
     }
   ]
 }
