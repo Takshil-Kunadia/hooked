@@ -159,3 +159,79 @@ describe("the feeders shot", () => {
     expect(project([settings.x, 0, settings.z - 2.2], subject, w, h, "feeders").y).toBeLessThanOrEqual(0.92);
   });
 });
+
+/* About half of "your browser" as printed on the map, the widest of the three Stop 0 labels. */
+const STOP0_LABEL_HALF_WIDTH = 2.2;
+/* Station labels sit this far behind or in front of the line (MetroMap's STATION_LABEL_OFFSET). */
+const STATION_LABEL_OFFSET = 1.75;
+/* Tablets' scrim fades out further right (to 70% of the width), so Stop 0 keeps clear of it. */
+const MIN_TABLET_STOP0_X = 0.1;
+/* Laptop windows too: a browser's chrome (and zoom) leaves them wide and short. */
+const WEB_VIEWPORTS: ReadonlyArray<readonly [number, number]> = [
+  ...VIEWPORTS,
+  [1171, 606],
+  [1288, 667],
+  [1366, 768],
+  [1536, 864],
+];
+
+describe("the web shot (Stop 0's round trip)", () => {
+  const stop0 = STATIONS.filter((s) => ["browser", "server", "php"].includes(s.id));
+
+  /** Each Stop 0 marker, and its label's left and right edge, projected. */
+  const projected = (w: number, h: number) => {
+    const subject = subjectFor("web", "php", layoutMode(w, h)) as Vec3;
+    return stop0.flatMap((s) => [
+      project([s.x, 0, s.z], subject, w, h, "web"),
+      ...[-1, 1].map((side) =>
+        project(
+          [s.x + side * STOP0_LABEL_HALF_WIDTH, 0, s.z + s.labelSide * STATION_LABEL_OFFSET],
+          subject,
+          w,
+          h,
+          "web",
+        ),
+      ),
+    ]);
+  };
+
+  it("centres on the three Stop 0 stations", () => {
+    const [x, y, z] = subjectFor("web", "php", "desktop") as Vec3;
+    expect(x).toBeCloseTo((stationById("browser").x + stationById("php").x) / 2);
+    expect(y).toBe(0.7);
+    expect(z).toBe(stationById("server").z);
+  });
+
+  it.each(WEB_VIEWPORTS.filter(([w, h]) => layoutMode(w, h) !== "stacked"))(
+    "shows your browser, the web server and PHP clear of the copy at %ix%i",
+    (w, h) => {
+      expect(stop0).toHaveLength(3);
+      const minX = layoutMode(w, h) === "tablet" ? MIN_TABLET_STOP0_X : MIN_DESKTOP_LABEL_X;
+      for (const p of projected(w, h)) {
+        expect(p.x).toBeGreaterThanOrEqual(minX);
+        expect(p.x).toBeLessThanOrEqual(MAX_LABEL_X);
+        expect(Math.abs(p.y)).toBeLessThanOrEqual(0.6);
+      }
+    },
+  );
+
+  it.each(WEB_VIEWPORTS.filter(([w, h]) => layoutMode(w, h) === "stacked"))(
+    "shows all three above the sheet at %ix%i",
+    (w, h) => {
+      for (const p of projected(w, h)) {
+        expect(Math.abs(p.x)).toBeLessThanOrEqual(MAX_LABEL_X);
+        expect(p.y).toBeGreaterThan(MIN_STACKED_LABEL_Y);
+        expect(p.y).toBeLessThanOrEqual(0.92);
+      }
+    },
+  );
+
+  it("stays closer than the overview, so the stations read", () => {
+    for (const layout of ["stacked", "tablet", "desktop", "wide"] as const) {
+      const subject = subjectFor("web", "php", layout) as Vec3;
+      const shot = shotFor(subject, layout, 1.6, "web");
+      const d = Math.hypot(...shot.position.map((v, i) => v - (shot.lookAt[i] ?? 0)));
+      expect(d).toBeLessThan(CAMERA[layout].overview.dist * 0.75);
+    }
+  });
+});

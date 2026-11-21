@@ -43,7 +43,7 @@ Add a `beat({...})` entry to an act's `beats` in `src/content/chapter-1/spec.ts`
 | `id`      | Unique within the act. Also the key into the copy map.                                                |
 | `rail`    | Label on the progress rail. At most 24 characters (tested).                                           |
 | `station` | Where the train stops (`StationId`, from `src/lib/metro/route.ts`).                                   |
-| `shot`    | Camera framing: `overview`, `station`, `depot`, `feeders` or `platform`.                              |
+| `shot`    | Camera framing: `overview`, `station`, `web` (all of Stop 0), `depot`, `feeders` or `platform`.       |
 | `focus`   | Map labels shown in focus mode: station ids, plus `feeders` and `depot`.                              |
 | `board`   | Shows a departure board in the act: `announcements` or `init`.                                        |
 | `pill`    | Text on the train's pill: `request`, `init` or `response`, built from the data (`pill.ts`).           |
