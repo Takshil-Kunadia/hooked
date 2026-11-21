@@ -33,8 +33,8 @@ test.describe("the copy", () => {
         act: act.id,
         texts: [
           act.querySelector("h2")?.textContent ?? "",
-          ...[...act.querySelectorAll("[data-beats] > li")].map((li) =>
-            [...li.childNodes, ...[...li.querySelectorAll("b")].flatMap((b) => [...b.childNodes])]
+          ...[...act.querySelectorAll(".story-beat-text")].map((text) =>
+            [...text.childNodes, ...[...text.querySelectorAll("b")].flatMap((b) => [...b.childNodes])]
               .filter((n) => n.nodeType === Node.TEXT_NODE)
               .map((n) => (n.textContent ?? "").trim())
               .reduce((a, b) => (b.length > a.length ? b : a), ""),
