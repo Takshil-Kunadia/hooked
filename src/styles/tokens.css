@@ -50,3 +50,12 @@ html[data-tile="day"] {
 html[data-tile="dusk"] {
   color-scheme: dark;
 }
+
+/* the story's lighting narrative: the scene sets these as it goes from day into the dark core */
+html[data-scene="light"] {
+  color-scheme: light;
+}
+
+html[data-scene="dark"] {
+  color-scheme: dark;
+}
