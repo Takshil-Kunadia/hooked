@@ -2,9 +2,18 @@
 
 import { useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
-import { Fog, Object3D, PMREMGenerator, type DirectionalLight, type Scene, type WebGLRenderer } from "three";
+import {
+  CanvasTexture,
+  Fog,
+  Object3D,
+  PMREMGenerator,
+  SRGBColorSpace,
+  type DirectionalLight,
+  type Scene,
+  type WebGLRenderer,
+} from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { toneCompensated, type Palette } from "./palette";
+import { skyColours, toneCompensated, toneCompensatedCss, type Palette } from "./palette";
 
 /** Round 5's studio light: a soft sky/ground fill and one shadow-casting key from the upper left. */
 const HEMI_SKY = "#ffffff";
@@ -33,23 +42,71 @@ function installEnvironment(gl: WebGLRenderer, scene: Scene, invalidate: () => v
   };
 }
 
-/** Background, fog and environment strength for a tile (round 5's `applyPalette()`, scene part). */
-function applySceneLook(scene: Scene, palette: Palette, fogScale: number): void {
+const SKY_HEIGHT = 256;
+
+/** A vertical gradient the height of the screen, drawn behind everything. */
+function skyTexture(palette: Palette): CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2;
+  canvas.height = SKY_HEIGHT;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const [top, bottom] = skyColours(palette);
+    const g = ctx.createLinearGradient(0, 0, 0, SKY_HEIGHT);
+    g.addColorStop(0, toneCompensatedCss(top));
+    g.addColorStop(1, toneCompensatedCss(bottom));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 2, SKY_HEIGHT);
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  return texture;
+}
+
+/**
+ * Background, fog and environment strength for a tile (round 5's `applyPalette()`, scene part).
+ * Returns the cleanup for a sky texture, when there is one.
+ */
+function applySceneLook(scene: Scene, palette: Palette, fogScale: number, sky: boolean): () => void {
   /* tone-compensated so the canvas matches the page background exactly */
   const bg = toneCompensated(palette.bg);
-  scene.background = bg;
+  const texture = sky ? skyTexture(palette) : null;
+  scene.background = texture ?? bg;
   scene.fog = new Fog(bg.clone(), palette.fogNear * fogScale, palette.fogFar * fogScale);
   scene.environmentIntensity = palette.env;
+  return () => texture?.dispose();
+}
+
+/** The part of the floor the key light's shadows cover (another map than the story's). */
+interface ShadowArea {
+  readonly x: number;
+  readonly z: number;
+  /** Half the side of the square it covers. */
+  readonly half: number;
 }
 
 interface LightingProps {
   readonly palette: Palette;
   /** Fog distances scale with the overview's camera distance (see `fogScale`). */
   readonly fogScale: number;
+  readonly area?: ShadowArea;
+  /** A soft gradient sky instead of a flat background (the page behind it must not show through). */
+  readonly sky?: boolean;
 }
 
+const KEY_OFFSET = [
+  KEY_POSITION[0] - KEY_TARGET[0],
+  KEY_POSITION[1] - KEY_TARGET[1],
+  KEY_POSITION[2] - KEY_TARGET[2],
+] as const;
+
 /** Background, fog, environment and lights. */
-export function Lighting({ palette, fogScale }: LightingProps) {
+export function Lighting({ palette, fogScale, area, sky = false }: LightingProps) {
+  const target = area ? ([area.x, 0, area.z] as const) : KEY_TARGET;
+  const keyPosition = [target[0] + KEY_OFFSET[0], target[1] + KEY_OFFSET[1], target[2] + KEY_OFFSET[2]] as const;
+  const bounds = area
+    ? { left: -area.half, right: area.half, top: area.half, bottom: -area.half, near: 1, far: area.half * 3 + 40 }
+    : SHADOW_BOUNDS;
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
@@ -59,34 +116,35 @@ export function Lighting({ palette, fogScale }: LightingProps) {
   /* R3F sets the shadow camera's bounds but doesn't rebuild its projection */
   useLayoutEffect(() => {
     key.current?.shadow.camera.updateProjectionMatrix();
-  }, []);
+  }, [bounds.left, bounds.right, bounds.top, bounds.bottom, bounds.far]);
 
   /* before the first frame, so the porcelain never renders unlit */
   useLayoutEffect(() => installEnvironment(gl, scene, invalidate), [gl, scene, invalidate]);
 
   useLayoutEffect(() => {
-    applySceneLook(scene, palette, fogScale);
+    const cleanup = applySceneLook(scene, palette, fogScale, sky);
     invalidate();
-  }, [scene, palette, fogScale, invalidate]);
+    return cleanup;
+  }, [scene, palette, fogScale, sky, invalidate]);
 
   return (
     <>
       <hemisphereLight args={[HEMI_SKY, HEMI_GROUND]} intensity={palette.hemi} />
-      <primitive object={keyTarget} position={KEY_TARGET} />
+      <primitive object={keyTarget} position={target} />
       <directionalLight
         ref={key}
-        position={KEY_POSITION}
+        position={keyPosition}
         target={keyTarget}
         color={palette.keyColor}
         intensity={palette.key}
         castShadow
         shadow-mapSize={[SHADOW_MAP_SIZE, SHADOW_MAP_SIZE]}
-        shadow-camera-left={SHADOW_BOUNDS.left}
-        shadow-camera-right={SHADOW_BOUNDS.right}
-        shadow-camera-top={SHADOW_BOUNDS.top}
-        shadow-camera-bottom={SHADOW_BOUNDS.bottom}
-        shadow-camera-near={SHADOW_BOUNDS.near}
-        shadow-camera-far={SHADOW_BOUNDS.far}
+        shadow-camera-left={bounds.left}
+        shadow-camera-right={bounds.right}
+        shadow-camera-top={bounds.top}
+        shadow-camera-bottom={bounds.bottom}
+        shadow-camera-near={bounds.near}
+        shadow-camera-far={bounds.far}
         shadow-bias={-0.0003}
         shadow-normalBias={0.02}
       />
