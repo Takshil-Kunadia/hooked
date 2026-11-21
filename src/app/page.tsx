@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Story } from "@/components/story/Story";
 import { CHAPTER_1_COPY } from "@/content/chapter-1/copy";
 import { CHAPTER_1, HERO_ACT_ID } from "@/content/chapter-1/spec";
@@ -34,12 +33,13 @@ export default async function Home() {
             comes back as a web page.
           </p>
           <p className="mt-6">
-            <Link
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a plain link keeps next/link's runtime (~3 KB gz) out of the route's JS budget; a full load suits a 3D page */}
+            <a
               href="/map"
               className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 text-[15px] font-semibold text-on-accent"
             >
               See every hook on the map <span aria-hidden="true">→</span>
-            </Link>
+            </a>
           </p>
         </div>
       </section>
