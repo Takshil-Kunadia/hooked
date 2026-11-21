@@ -110,6 +110,8 @@ describe("the map's store", () => {
     expect(store.getState().flight?.seq).toBe((first ?? 0) + 1);
     store.getState().land();
     expect(store.getState().flight).toBeNull();
+    store.getState().reset();
+    expect(store.getState()).toMatchObject({ hovered: null, selected: null, ride: 0 });
   });
 
   it("rides to the last stop, stops there, and starts over from the beginning", () => {
@@ -136,5 +138,15 @@ describe("the map's data", () => {
     expect(map.scenario).toBe("block-single");
     expect(map.request.path).toBe("/hello-world/");
     expect(map.stops.length).toBeGreaterThan(500);
+  });
+});
+
+describe("the recorded requests", () => {
+  it("offers every request the latest version recorded, and refuses one it didn't", async () => {
+    const { getRequestChoices } = await import("./data");
+    const choices = await getRequestChoices();
+    expect(choices.map((c) => c.id)).toContain("admin-dashboard");
+    expect(choices.find((c) => c.id === "block-single")?.path).toBe("/hello-world/");
+    await expect(getLifecycleMap("no-such-request")).rejects.toThrow(RangeError);
   });
 });

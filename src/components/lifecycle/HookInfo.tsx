@@ -54,6 +54,7 @@ export function HookInfo({ map }: HookInfoProps) {
         )}
       </div>
       <h2 className="map-card-name">{stop.name}</h2>
+      {stop.demo && <p className="map-card-demo">Made up by this site&apos;s demo plugin. Not part of WordPress.</p>}
       <p className="map-card-call">
         {isAction ? "do_action" : "apply_filters"}( &apos;{stop.name}&apos;
         {isAction ? "" : ", $value"} ) ran {times(stop.count)}, first as call{" "}

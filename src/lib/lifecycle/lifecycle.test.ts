@@ -164,3 +164,45 @@ describe("the lifecycle of a real request", async () => {
     expect(map.wp).toBe(meta.wp);
   });
 });
+
+describe("every recorded request", async () => {
+  const { latest } = await readIndex(ROOT);
+  const [meta, catalog] = await Promise.all([readMeta(ROOT, latest), readCatalog(ROOT, latest)]);
+  const lookup = catalogMatcher(catalog.hooks);
+  const maps = await Promise.all(
+    meta.scenarios.map(async (id) => buildLifecycle({ trace: await readTrace(ROOT, latest, id), lookup, wp: meta.wp })),
+  );
+  const stagesOf = (id: string): string[] => maps.find((m) => m.scenario === id)?.stages.map((s) => s.id) ?? [];
+
+  it("lays out every hook of every request, in stages that account for every call", () => {
+    for (const map of maps) {
+      expect(
+        map.stages.reduce((n, s) => n + s.count, 0),
+        map.scenario,
+      ).toBe(map.stops.length);
+      expect(
+        map.stages.reduce((n, s) => n + s.calls, 0),
+        map.scenario,
+      ).toBe(map.totalCalls);
+      expect(map.stages[0]?.id, map.scenario).toBe("boot");
+      expect(map.stages.at(-1)?.id, map.scenario).toBe("shutdown");
+    }
+  });
+
+  it("follows each request through the door it came in by", () => {
+    expect(stagesOf("classic-404")).toEqual(["boot", "init", "main", "template", "render", "shutdown"]);
+    expect(stagesOf("rest-posts")).toEqual(["boot", "init", "main", "rest", "shutdown"]);
+    expect(stagesOf("admin-dashboard")).toEqual(["boot", "init", "admin", "screen", "shutdown"]);
+    expect(stagesOf("ajax-nopriv")).toEqual(["boot", "init", "ajax", "action", "shutdown"]);
+    expect(stagesOf("cron")).toEqual(["boot", "init", "cron", "shutdown"]);
+    expect(maps.find((m) => m.scenario === "cron")?.kind).toBe("cron");
+  });
+
+  it("marks the demo plugins' own hooks as not part of WordPress", () => {
+    const ajax = maps.find((m) => m.scenario === "ajax-nopriv");
+    expect(ajax?.stops.find((s) => s.name === "wp_ajax_nopriv_hooked_demo")?.demo).toBe(false);
+    const cron = maps.find((m) => m.scenario === "cron");
+    expect(cron?.stops.find((s) => s.name === "hooked_demo_cron")?.demo).toBe(true);
+    expect(cron?.stops.find((s) => s.name === "init")?.demo).toBe(false);
+  });
+});

@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { LifecycleMap } from "@/lib/lifecycle/model";
+import { lifecycleStore } from "@/lib/lifecycle/store";
 import { isWebGLAvailable } from "@/lib/webgl/support";
 import { HookInfo } from "./HookInfo";
 import { MapControlsBar } from "./MapControlsBar";
@@ -36,6 +37,8 @@ export function LifecycleApp({ map }: LifecycleAppProps) {
   const pill = useRef<HTMLDivElement>(null);
   const [dark, setDark] = useState(false);
   const onMood = useCallback((mood: number) => setDark(mood >= DARK_UI_FROM), []);
+  /* the store outlives a page: a newly opened map starts with nothing picked and the train parked */
+  useEffect(() => lifecycleStore.getState().reset(), [map]);
 
   return (
     <div className="map-app" data-scheme={dark ? "dark" : "light"}>
