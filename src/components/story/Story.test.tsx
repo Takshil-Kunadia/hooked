@@ -99,7 +99,8 @@ describe("Story", () => {
     expect(html).toMatch(
       /<ol data-beats="" class="story-beats"><li data-n="1" data-active="">.*<b>First\.<\/b> Hello <code data-card="init"/,
     );
-    expect(html).toContain('<li data-n="2"><b>Second.</b></li></ol>');
+    /* the words sit in a wrapper, which short windows clamp to one line for the inactive beats */
+    expect(html).toContain('<li data-n="2"><div class="story-beat-text"><b>Second.</b></div></li></ol>');
     expect(html).toContain('<h2 id="boot-title">Off we go</h2>');
   });
 
@@ -113,7 +114,7 @@ describe("Story", () => {
   it("gives a beat's copy the story data when the copy needs it", () => {
     const copy = { ...COPY, two: (d: StoryData) => <b>Asks for {d.request.path}</b> };
     const html = renderToStaticMarkup(<Story spec={SPEC} copy={copy} data={DATA} explainers={{ explainers: [] }} />);
-    expect(html).toContain('<li data-n="2"><b>Asks for /hello-world/</b></li>');
+    expect(html).toContain('<li data-n="2"><div class="story-beat-text"><b>Asks for /hello-world/</b></div></li>');
   });
 
   it("ends an act that names hooks with an 'Under the hood' list, in fired order, linked to the source", () => {

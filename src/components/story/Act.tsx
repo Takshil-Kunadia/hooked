@@ -35,7 +35,7 @@ export function Act({ act, copy, footer, children }: ActProps) {
             <ol data-beats="" className="story-beats">
               {act.beats.map((beat, k) => (
                 <li key={beat.id} data-n={k + 1} data-active={k === 0 ? "" : undefined}>
-                  {Object.hasOwn(copy, beat.id) ? copy[beat.id] : null}
+                  <div className="story-beat-text">{Object.hasOwn(copy, beat.id) ? copy[beat.id] : null}</div>
                 </li>
               ))}
             </ol>

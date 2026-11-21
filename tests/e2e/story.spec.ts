@@ -43,6 +43,21 @@ function noteArrival(testInfo: TestInfo, type: string, ms: number): void {
 /** How long the reduced-motion test lets the train take a new stop before reading its states. */
 const TRAIN_TAKES_STOP_MS = 1000;
 
+/** Laptop windows, wide and often short: a browser's chrome, and zoom, eat the height. */
+const LAPTOP_VIEWPORTS = [
+  { width: 1024, height: 700 },
+  { width: 1171, height: 606 },
+  { width: 1280, height: 720 },
+  { width: 1288, height: 667 },
+  { width: 1366, height: 768 },
+  { width: 1440, height: 900 },
+  { width: 1536, height: 864 },
+  { width: 1680, height: 1050 },
+  { width: 1920, height: 1080 },
+] as const;
+/** The least room an act's copy keeps above and below itself in its pin. */
+const COPY_MARGIN = 16;
+
 test.describe("the story", () => {
   for (const viewport of [
     { width: 1440, height: 900 },
@@ -73,6 +88,34 @@ test.describe("the story", () => {
       }
     });
   }
+
+  test("every beat's copy fits on screen in laptop windows", async ({ page }, testInfo) => {
+    onlyDesktop(testInfo);
+    /* a layout property of the copy, so run without the stage */
+    await withoutStage(page);
+    await visit(page, "/");
+    for (const viewport of LAPTOP_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      /* each beat in turn is the active one (it shows in full); the copy, centred in its 100svh pin, must fit */
+      const overflows = await page.evaluate((margin) => {
+        const out: string[] = [];
+        for (const act of document.querySelectorAll<HTMLElement>("section.story-act")) {
+          const body = act.querySelector<HTMLElement>(".story-copy-body");
+          const beats = [...act.querySelectorAll<HTMLElement>("[data-beats] > li")];
+          const was = beats.findIndex((li) => li.hasAttribute("data-active"));
+          const room = window.innerHeight - 2 * margin;
+          beats.forEach((active, k) => {
+            beats.forEach((li) => li.toggleAttribute("data-active", li === active));
+            const height = body?.getBoundingClientRect().height ?? 0;
+            if (height > room) out.push(`${act.id} beat ${k + 1}: ${Math.round(height)}px of copy, ${room}px of room`);
+          });
+          beats.forEach((li, k) => li.toggleAttribute("data-active", k === was));
+        }
+        return out;
+      }, COPY_MARGIN);
+      expect(overflows, `${viewport.width}x${viewport.height}`).toEqual([]);
+    }
+  });
 
   test("keys reach the last beat", async ({ page }, testInfo) => {
     onlyDesktop(testInfo);

@@ -112,7 +112,8 @@
 
   .story-copy h2 {
     margin-bottom: 26px;
-    font-size: clamp(38px, 6.2vw, 98px);
+    /* by height too: in a short window the title gives way before the beats do */
+    font-size: clamp(38px, min(6.2vw, 10svh), 98px);
     font-weight: 700;
     line-height: 0.98;
     letter-spacing: -0.038em;
@@ -339,6 +340,25 @@
 @media (prefers-reduced-motion: reduce) {
   .story-copy-body {
     translate: none;
+  }
+}
+
+/*
+ * A short window (a laptop under the browser's chrome, or zoomed in) can't fit every beat in full:
+ * the others keep one line each, their lead-in, so the act fits in its pin. Screen readers still
+ * read every word, and a beat that takes focus becomes the active one and opens up.
+ */
+@media (min-width: 761px) and (max-height: 880px) {
+  .story-beats {
+    gap: 12px;
+  }
+
+  .story-beats > li:not([data-active]) > .story-beat-text {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
   }
 }
 
