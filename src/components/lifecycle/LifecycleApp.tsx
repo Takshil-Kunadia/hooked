@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { LifecycleMap } from "@/lib/lifecycle/model";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { PORTRAIT_LAYOUT } from "@/lib/lifecycle/layout";
+import { relayout, type LifecycleMap } from "@/lib/lifecycle/model";
 import { lifecycleStore } from "@/lib/lifecycle/store";
 import { isWebGLAvailable } from "@/lib/webgl/support";
 import { HookInfo } from "./HookInfo";
@@ -24,6 +25,13 @@ const subscribeMotion = (onChange: () => void): (() => void) => {
 };
 const getMotion = (): boolean => window.matchMedia(REDUCED_MOTION).matches;
 const getServerMotion = (): boolean => false;
+const PORTRAIT = "(orientation: portrait)";
+const subscribePortrait = (onChange: () => void): (() => void) => {
+  const q = window.matchMedia(PORTRAIT);
+  q.addEventListener("change", onChange);
+  return () => q.removeEventListener("change", onChange);
+};
+const getPortrait = (): boolean => window.matchMedia(PORTRAIT).matches;
 
 interface LifecycleAppProps {
   readonly map: LifecycleMap;
@@ -33,6 +41,9 @@ interface LifecycleAppProps {
 export function LifecycleApp({ map }: LifecycleAppProps) {
   const webgl = useSyncExternalStore<boolean | null>(subscribeNever, getWebGL, getServerWebGL);
   const reducedMotion = useSyncExternalStore(subscribeMotion, getMotion, getServerMotion);
+  /* a tall screen gets narrow rows, so the whole line still fits */
+  const portrait = useSyncExternalStore(subscribePortrait, getPortrait, getServerMotion);
+  const placed = useMemo(() => (portrait ? relayout(map, PORTRAIT_LAYOUT) : map), [map, portrait]);
   const overlay = useRef<HTMLDivElement>(null);
   const pill = useRef<HTMLDivElement>(null);
   const [dark, setDark] = useState(false);
@@ -49,12 +60,19 @@ export function LifecycleApp({ map }: LifecycleAppProps) {
       )}
       {webgl && (
         <div className="map-canvas" aria-hidden="true">
-          <LifecycleStage map={map} overlay={overlay} pill={pill} reducedMotion={reducedMotion} onMood={onMood} />
+          <LifecycleStage
+            key={portrait ? "tall" : "wide"}
+            map={placed}
+            overlay={overlay}
+            pill={pill}
+            reducedMotion={reducedMotion}
+            onMood={onMood}
+          />
         </div>
       )}
       <div ref={overlay} className="map-names" aria-hidden="true" />
       <div ref={pill} className="map-pill" aria-hidden="true" />
-      <MapControlsBar map={map} />
+      <MapControlsBar map={placed} />
       <HookInfo map={map} />
     </div>
   );

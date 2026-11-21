@@ -2,8 +2,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { readCatalog, readIndex, readMeta, readTrace } from "@/lib/wp-data/files";
 import { catalogMatcher, hookDocsUrl } from "./catalog-match";
-import { DEFAULT_LAYOUT, rowSizes, snakeLayout } from "./layout";
-import { buildLifecycle } from "./model";
+import { DEFAULT_LAYOUT, PORTRAIT_LAYOUT, rowSizes, snakeLayout } from "./layout";
+import { buildLifecycle, relayout } from "./model";
 import { stageAt, stageStarts } from "./stages";
 
 const ROOT = path.join(process.cwd(), "content", "versions");
@@ -142,6 +142,16 @@ describe("the lifecycle of a real request", async () => {
     const init = map.stops.find((s) => s.name === "init");
     expect(init?.stage).toBe("init");
     expect(map.stops.find((s) => s.name === "shutdown")?.stage).toBe("shutdown");
+  });
+
+  it("lays the same request out again for a tall screen, changing only where things are", () => {
+    const tall = relayout(map, PORTRAIT_LAYOUT);
+    expect(tall.stops.map((s) => s.name)).toEqual(map.stops.map((s) => s.name));
+    expect(tall.bounds.maxX).toBe(PORTRAIT_LAYOUT.rowWidth + PORTRAIT_LAYOUT.pad);
+    expect(tall.bounds.maxZ).toBeGreaterThan(map.bounds.maxZ);
+    expect(tall.stages.map((s) => s.count)).toEqual(map.stages.map((s) => s.count));
+    expect(tall.stages[1]?.zRange[0]).toBeGreaterThan(map.stages[1]!.zRange[0]);
+    expect(relayout(map, DEFAULT_LAYOUT)).toEqual(map);
   });
 
   it("gives every stop its own place on the map", () => {
