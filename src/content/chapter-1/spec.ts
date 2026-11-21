@@ -1,5 +1,5 @@
 /**
- * Chapter 1, "The journey of a request": from your browser to `init`. Plain data, so the page can
+ * Chapter 1, "The journey of a request": from your browser, through WordPress, and back. Plain data, so the page can
  * hand it to the 3D stage. Each beat says where the train stops, what the camera frames, which map
  * labels show (focus mode) and which hooks the beat talks about (checked against the real catalog).
  * The words live in copy.tsx, by beat id.
@@ -12,9 +12,6 @@ export const HERO_ACT_ID = "hero";
 
 /** The hero and the overviews show station names only. */
 const STATION_NAMES: ReadonlyArray<FocusId> = STATIONS.map((s) => s.id);
-/** What the last beat looks ahead to: where we are, and the rest of the line. */
-const AHEAD: ReadonlyArray<FocusId> = ["init", "query", "depot", "template", "the_title", "response"];
-
 type BeatInput = Omit<BeatSpec, "focus" | "hooks"> & Partial<Pick<BeatSpec, "focus" | "hooks">>;
 
 /** A beat that, unless it says otherwise, shows its own station's label and names no hooks. */
@@ -97,10 +94,83 @@ export const CHAPTER_1: ChapterSpec = {
       ],
     },
     {
-      id: "next",
-      kicker: "Next stop · WP::main()",
-      title: "Finding your post.",
-      beats: [beat({ id: "next", rail: "next stop", station: "init", shot: "overview", focus: AHEAD })],
+      id: "main",
+      kicker: "Finding your post · WP::main()",
+      title: "What did you ask for?",
+      beats: [
+        beat({ id: "parse", rail: "reading the address", station: "query", shot: "station", hooks: ["parse_request"] }),
+        beat({ id: "query", rail: "building the query", station: "query", shot: "station", hooks: ["pre_get_posts"] }),
+        beat({
+          id: "depot",
+          rail: "to the depot",
+          station: "query",
+          shot: "depot",
+          focus: ["query", "depot"],
+          hooks: ["the_posts"],
+        }),
+        beat({ id: "wp", rail: "ready to draw", station: "query", shot: "station", hooks: ["wp"] }),
+      ],
+    },
+    {
+      id: "template",
+      kicker: "The junction · template-loader.php",
+      title: "Which template?",
+      beats: [
+        beat({
+          id: "redirect",
+          rail: "last chance to redirect",
+          station: "template",
+          shot: "station",
+          hooks: ["template_redirect"],
+        }),
+        beat({ id: "hierarchy", rail: "the template hierarchy", station: "template", shot: "station" }),
+        beat({
+          id: "include",
+          rail: "the template is chosen",
+          station: "template",
+          shot: "station",
+          hooks: ["template_include"],
+        }),
+      ],
+    },
+    {
+      id: "render",
+      kicker: "The workshop · drawing the page",
+      title: "This is a filter.",
+      beats: [
+        beat({ id: "blocks", rail: "drawing the blocks", station: "the_title", shot: "station" }),
+        beat({
+          id: "filter",
+          rail: "a filter changes a value",
+          station: "the_title",
+          shot: "station",
+          hooks: ["the_title"],
+        }),
+        beat({
+          id: "content",
+          rail: "a line of filters",
+          station: "the_title",
+          shot: "station",
+          hooks: ["the_content"],
+        }),
+        beat({
+          id: "assemble",
+          rail: "the head and the footer",
+          station: "the_title",
+          shot: "station",
+          hooks: ["wp_head", "wp_footer"],
+        }),
+      ],
+    },
+    {
+      id: "back",
+      kicker: "Back to your browser",
+      title: "The page comes back.",
+      beats: [
+        beat({ id: "sent", rail: "the page is sent", station: "response", shot: "station", pill: "response" }),
+        beat({ id: "shutdown", rail: "lights out", station: "response", shot: "station", hooks: ["shutdown"] }),
+        beat({ id: "again", rail: "the whole trip", station: "response", shot: "overview", focus: STATION_NAMES }),
+      ],
     },
   ],
 };

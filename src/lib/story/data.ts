@@ -8,7 +8,22 @@ const CONTENT_ROOT = path.join(process.cwd(), "content", "versions");
 const SCENARIO = "block-single";
 const BOOT_HOOKS = ["muplugins_loaded", "plugins_loaded", "setup_theme", "after_setup_theme"] as const;
 /** Every hook named in Chapter 1's "Under the hood" lists. */
-const SOURCE_HOOKS = [...BOOT_HOOKS, "init", "wp_loaded"] as const;
+const SOURCE_HOOKS = [
+  ...BOOT_HOOKS,
+  "init",
+  "wp_loaded",
+  "parse_request",
+  "pre_get_posts",
+  "the_posts",
+  "wp",
+  "template_redirect",
+  "template_include",
+  "wp_head",
+  "the_title",
+  "the_content",
+  "wp_footer",
+  "shutdown",
+] as const;
 
 /** Chapter 1's facts from the latest WordPress version's data. Throws if a fact is missing. */
 export async function getStoryData(): Promise<StoryData> {

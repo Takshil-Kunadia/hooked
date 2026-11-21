@@ -373,3 +373,10 @@
     margin-bottom: 12px;
   }
 }
+
+/* a link inside a beat (the last beat's way to the map) */
+.story-beat-text a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

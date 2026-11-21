@@ -16,7 +16,20 @@ export const BEATS = [
   "init/1",
   "init/2",
   "init/3",
-  "next/0",
+  "main/0",
+  "main/1",
+  "main/2",
+  "main/3",
+  "template/0",
+  "template/1",
+  "template/2",
+  "render/0",
+  "render/1",
+  "render/2",
+  "render/3",
+  "back/0",
+  "back/1",
+  "back/2",
 ] as const;
 
 /** The acts of Chapter 1: the part of a beat name before the slash. */
