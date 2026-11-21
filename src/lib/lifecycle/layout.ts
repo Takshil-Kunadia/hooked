@@ -26,7 +26,10 @@ export const DEFAULT_LAYOUT: LayoutOptions = {
   pad: 1.2,
 };
 
-interface Row {
+/** For a tall screen: narrow rows, more of them. */
+export const PORTRAIT_LAYOUT: LayoutOptions = { ...DEFAULT_LAYOUT, rowWidth: 18, maxPerRow: 28 };
+
+export interface Row {
   readonly group: number;
   /** Index of the row's first stop. */
   readonly first: number;

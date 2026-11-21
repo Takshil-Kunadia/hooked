@@ -451,14 +451,20 @@
   font-size: 13px;
   line-height: 1.7;
 }
+.map-tt-stage li code {
+  overflow-wrap: anywhere;
+}
 .map-tt-stage li span {
   color: var(--muted);
   font-size: 12px;
 }
 
 @media (max-width: 760px) {
-  .map-legend span:last-child {
+  .map-legend {
     display: none;
+  }
+  .map-lede {
+    font-size: 13px;
   }
   .map-card {
     top: auto;

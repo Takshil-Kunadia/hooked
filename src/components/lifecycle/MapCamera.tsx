@@ -8,7 +8,7 @@ import { lifecycleStore } from "@/lib/lifecycle/store";
 import { cameraPosition, STOP_DIST, type MapPose } from "@/lib/lifecycle/view";
 
 const MIN_DIST = 3.5;
-const MAX_DIST = 160;
+const MAX_DIST = 320;
 /** Keeps the map from turning into a horizon view or flipping over. */
 const MIN_POLAR = 0.15;
 const MAX_POLAR = 1.15;

@@ -5,7 +5,7 @@
  */
 import { normalizeListeners, type RawListener } from "@/lib/wp-data/trace";
 import type { CatalogDoc, CatalogLookup } from "./catalog-match";
-import { DEFAULT_LAYOUT, snakeLayout, type LayoutOptions, type XZ } from "./layout";
+import { DEFAULT_LAYOUT, snakeLayout, type LayoutOptions, type Row, type XZ } from "./layout";
 import { isDemoName } from "@/lib/wp-data/scenarios";
 import { entryKind, stageAt, stageStarts, type EntryKind, type StageId } from "./stages";
 
@@ -139,6 +139,44 @@ function callsPerStage(trace: LifecycleTrace, starts: ReturnType<typeof stageSta
   return calls;
 }
 
+/** Where a stage's title goes (in the gap before it, nearer its first row) and which rows it spans. */
+function stageGeometry(
+  rows: ReadonlyArray<Row>,
+  layout: LayoutOptions,
+): Pick<LifecycleStage, "label" | "zRange"> | null {
+  const row = rows[0];
+  if (!row) return null;
+  const last = rows[rows.length - 1] ?? row;
+  return {
+    label: [row.dir === 1 ? 0 : layout.rowWidth, row.z - (layout.rowGap + layout.stageGap) * 0.45] as const,
+    zRange: [row.z, last.z] as const,
+  };
+}
+
+/** The same request laid out again, for another screen shape: only positions change. */
+export function relayout(map: LifecycleMap, layout: LayoutOptions): LifecycleMap {
+  const placed = snakeLayout(
+    map.stages.map((s) => s.count),
+    layout,
+  );
+  return {
+    ...map,
+    stops: map.stops.map((s, i) => {
+      const [x, z] = placed.positions[i] ?? [0, 0];
+      return { ...s, x, z };
+    }),
+    stages: map.stages.map((s, group) => ({
+      ...s,
+      ...(stageGeometry(
+        placed.rows.filter((r) => r.group === group),
+        layout,
+      ) ?? { label: s.label, zRange: s.zRange }),
+    })),
+    path: placed.path,
+    bounds: placed.bounds,
+  };
+}
+
 export function buildLifecycle({ trace, lookup, wp, layout = DEFAULT_LAYOUT }: LifecycleInput): LifecycleMap {
   const kind = entryKind(trace.request.path);
   const starts = stageStarts(trace.hooks, kind);
@@ -173,9 +211,8 @@ export function buildLifecycle({ trace, lookup, wp, layout = DEFAULT_LAYOUT }: L
     const rows = placed.rows.filter((r) => r.group === group);
     const start = first;
     first += count;
-    const row = rows[0];
-    if (count === 0 || !row) return [];
-    const lastRow = rows[rows.length - 1] ?? row;
+    const geometry = stageGeometry(rows, layout);
+    if (count === 0 || !geometry) return [];
     return [
       {
         id: stage.id,
@@ -187,9 +224,7 @@ export function buildLifecycle({ trace, lookup, wp, layout = DEFAULT_LAYOUT }: L
         count,
         actions: stops.slice(start, start + count).filter((s) => s.type === "action").length,
         calls: calls.get(stage.id) ?? 0,
-        /* in the gap before the stage, nearer its own first row */
-        label: [row.dir === 1 ? 0 : layout.rowWidth, row.z - (layout.rowGap + layout.stageGap) * 0.45] as const,
-        zRange: [row.z, lastRow.z] as const,
+        ...geometry,
       },
     ];
   });

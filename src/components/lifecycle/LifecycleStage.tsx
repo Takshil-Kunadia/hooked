@@ -26,7 +26,7 @@ const GL_OPTIONS = {
   powerPreference: "high-performance",
   toneMapping: NeutralToneMapping,
 } as const;
-const CAMERA_OPTIONS = { fov: MAP_FOV, near: 0.1, far: 400 } as const;
+const CAMERA_OPTIONS = { fov: MAP_FOV, near: 0.1, far: 700 } as const;
 const LINE_WIDTH = 0.42;
 /** Sweep resolution per unit of line: the turns are the only curves. */
 const SEGMENTS_PER_UNIT = 4;
@@ -127,7 +127,7 @@ function Scene({ map, overlay, pill, reducedMotion, onMood }: SceneProps) {
   return (
     <>
       <MapCamera home={home} train={train} reducedMotion={reducedMotion} onLook={onLook} />
-      <Lighting palette={palette} fogScale={fogScale(MAP_FOG_DIST)} area={centre} sky />
+      <Lighting palette={palette} fogScale={fogScale(Math.max(MAP_FOG_DIST, home.dist * 1.2))} area={centre} sky />
       <MetroLine path={path} width={LINE_WIDTH} segments={segments} material={materials.line} />
       <Stops stops={map.stops} materials={materials} />
       {labelStyle &&
