@@ -70,6 +70,21 @@ const FEEDERS_FRAMING: Readonly<Record<LayoutMode, { readonly distScale: number;
   wide: { distScale: 1.12, dz: 2.5 },
 };
 
+/**
+ * The web shot frames Stop 0's round trip: your browser, the web server and PHP with their labels,
+ * fitted to the room right of the copy (or above the sheet on phones) at any aspect. Tuned per
+ * layout with `camera.test.ts`'s pin.
+ */
+const WEB_FRAMING: Readonly<Record<LayoutMode, { readonly shiftFrac: number; readonly roomFrac: number }>> = {
+  /* shiftFrac: where the subject sits right of centre; roomFrac: the free half-width it fits into */
+  stacked: { shiftFrac: 0, roomFrac: 0.88 },
+  tablet: { shiftFrac: 0.53, roomFrac: 0.38 },
+  desktop: { shiftFrac: 0.43, roomFrac: 0.5 },
+  wide: { shiftFrac: 0.42, roomFrac: 0.52 },
+};
+/** World units either side of the web shot's subject to keep on screen: the outer stations' labels. */
+const WEB_HALF_SPAN = 7;
+
 const HALF_FOV_TAN = Math.tan((15 * Math.PI) / 180);
 
 function rig(look: Vec3, dist: number, elevDeg: number): { position: Vec3; lookAt: Vec3 } {
@@ -89,9 +104,27 @@ export function shotFor(
 ): { position: Vec3; lookAt: Vec3 } {
   const cam = CAMERA[layout];
   if (subject === "overview") return rig(cam.overview.look, cam.overview.dist, cam.overview.elev);
+  if (shot === "web") return webShot(subject, layout, aspect);
   const dist = shot === "feeders" ? cam.dist * FEEDERS_FRAMING[layout].distScale : cam.dist;
   const halfW = dist * HALF_FOV_TAN * aspect;
   return rig([subject[0] - cam.shiftFrac * halfW, subject[1] + cam.lookY, subject[2]], dist, cam.elev);
+}
+
+/** Pulls back until Stop 0 fits its room; the aim drops with the distance so the composition holds. */
+function webShot(subject: Vec3, layout: LayoutMode, aspect: number): { position: Vec3; lookAt: Vec3 } {
+  const cam = CAMERA[layout];
+  const { shiftFrac, roomFrac } = WEB_FRAMING[layout];
+  const dist = Math.max(cam.dist, WEB_HALF_SPAN / (roomFrac * HALF_FOV_TAN * aspect));
+  const halfW = dist * HALF_FOV_TAN * aspect;
+  const lookY = (cam.lookY * dist) / cam.dist;
+  return rig([subject[0] - shiftFrac * halfW, subject[1] + lookY, subject[2]], dist, cam.elev);
+}
+
+/** Midway between your browser and PHP, on the line: the middle of Stop 0. */
+function webSubject(): Vec3 {
+  const browser = stationById("browser");
+  const php = stationById("php");
+  return [(browser.x + php.x) / 2, SUBJECT_LIFT, stationById("server").z];
 }
 
 function feedersSubject(layout: LayoutMode): Vec3 {
@@ -109,6 +142,8 @@ export function subjectFor(shot: ShotId, station: StationId, layout: LayoutMode)
       return "overview";
     case "depot":
       return [DEPOT.x, SUBJECT_LIFT, DEPOT.z];
+    case "web":
+      return webSubject();
     case "feeders":
       return feedersSubject(layout);
     case "platform": {

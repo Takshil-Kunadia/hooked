@@ -1,6 +1,6 @@
 import { STATIONS, type StationId } from "@/lib/metro/route";
 
-export type ShotId = "overview" | "station" | "depot" | "feeders" | "platform";
+export type ShotId = "overview" | "station" | "depot" | "feeders" | "platform" | "web";
 export type FocusId = StationId | "feeders" | "depot";
 
 export interface BeatSpec {
