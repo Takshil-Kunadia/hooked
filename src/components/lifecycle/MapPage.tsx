@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { RequestChoice } from "@/lib/lifecycle/data";
 import type { LifecycleMap } from "@/lib/lifecycle/model";
 import { LifecycleApp } from "./LifecycleApp";
@@ -31,7 +30,7 @@ function RequestPicker({ choices, current }: RequestPickerProps) {
       <ul>
         {choices.map((c) => (
           <li key={c.id}>
-            <Link
+            <a
               href={c.id === "block-single" ? "/map" : `/map/${c.id}`}
               aria-current={c.id === current ? "page" : undefined}
             >
@@ -39,7 +38,7 @@ function RequestPicker({ choices, current }: RequestPickerProps) {
               <code>
                 {c.method} {c.path}
               </code>
-            </Link>
+            </a>
           </li>
         ))}
       </ul>
@@ -62,9 +61,10 @@ export function MapPage({ map, choices }: MapPageProps) {
     <main className="relative">
       <section aria-labelledby="map-title" className="map-hero">
         <div className="map-intro">
-          <Link href="/" className="map-back">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a plain link keeps next/link's runtime (~3 KB gz) out of the route's JS budget; a full load suits a 3D page */}
+          <a href="/" className="map-back">
             ← The story
-          </Link>
+          </a>
           <h1 id="map-title" className="map-title">
             Every hook, one request.
           </h1>
