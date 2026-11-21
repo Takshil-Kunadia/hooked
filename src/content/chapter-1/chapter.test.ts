@@ -72,7 +72,7 @@ describe("Chapter 1 spec", () => {
       "before server server station - - -",
       "before php php station - - -",
       "before database php depot - - -",
-      "before response php overview - response -",
+      "before response php web - response -",
       "boot index index station - - -",
       "boot config config station - - -",
       "boot settings settings station - - -",
