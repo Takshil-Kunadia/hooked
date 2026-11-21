@@ -6,7 +6,8 @@
 import { normalizeListeners, type RawListener } from "@/lib/wp-data/trace";
 import type { CatalogDoc, CatalogLookup } from "./catalog-match";
 import { DEFAULT_LAYOUT, snakeLayout, type LayoutOptions, type XZ } from "./layout";
-import { stageAt, stageStarts, type StageId } from "./stages";
+import { isDemoName } from "@/lib/wp-data/scenarios";
+import { entryKind, stageAt, stageStarts, type EntryKind, type StageId } from "./stages";
 
 /** At most this many listeners travel with a stop; the rest are counted. */
 const MAX_LISTENERS = 12;
@@ -47,6 +48,8 @@ export interface LifecycleStop {
   /** Its first call's position among all of the request's hook calls (0-based). */
   readonly firstCall: number;
   readonly stage: StageId;
+  /** Made up by this site's demo plugins, not part of WordPress. */
+  readonly demo: boolean;
   readonly x: number;
   readonly z: number;
   /** Index into `LifecycleMap.docs`: dynamic hooks share their pattern's entry. */
@@ -75,6 +78,7 @@ export interface LifecycleStage {
 export interface LifecycleMap {
   readonly wp: string;
   readonly scenario: string;
+  readonly kind: EntryKind;
   readonly request: { readonly method: string; readonly path: string };
   readonly status: number;
   readonly theme: string | null;
@@ -136,7 +140,8 @@ function callsPerStage(trace: LifecycleTrace, starts: ReturnType<typeof stageSta
 }
 
 export function buildLifecycle({ trace, lookup, wp, layout = DEFAULT_LAYOUT }: LifecycleInput): LifecycleMap {
-  const starts = stageStarts(trace.hooks);
+  const kind = entryKind(trace.request.path);
+  const starts = stageStarts(trace.hooks, kind);
   const ordered = [...trace.hooks].sort((a, b) => a.firstIndex - b.firstIndex);
   const staged = ordered.map((h) => ({ hook: h, stage: stageAt(starts, h.firstIndex) }));
   const groups = starts.map((s) => staged.filter((h) => h.stage.id === s.stage.id).length);
@@ -154,6 +159,7 @@ export function buildLifecycle({ trace, lookup, wp, layout = DEFAULT_LAYOUT }: L
       count: hook.count,
       firstCall: hook.firstIndex,
       stage: stage.id,
+      demo: isDemoName(hook.name),
       x,
       z,
       doc: table.add(lookup(hook.name, hook.type, hook.file)),
@@ -191,6 +197,7 @@ export function buildLifecycle({ trace, lookup, wp, layout = DEFAULT_LAYOUT }: L
   return {
     wp,
     scenario: trace.scenario,
+    kind,
     request: trace.request,
     status: trace.status,
     theme: trace.theme,

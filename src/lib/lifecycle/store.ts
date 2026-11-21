@@ -24,19 +24,24 @@ interface LifecycleActions {
   flyTo(pose: MapPose): void;
   land(): void;
   stopFollowing(): void;
+  /** Back to the start, for a newly opened map. */
+  reset(): void;
 }
 
 export type LifecycleStore = StoreApi<LifecycleState & LifecycleActions>;
 
 export function createLifecycleStore(): LifecycleStore {
   let seq = 0;
-  return createStore<LifecycleState & LifecycleActions>()((set, get) => ({
+  const initial: LifecycleState = {
     hovered: null,
     selected: null,
     riding: false,
     ride: 0,
     follow: false,
     flight: null,
+  };
+  return createStore<LifecycleState & LifecycleActions>()((set, get) => ({
+    ...initial,
     hover: (i) => set({ hovered: i }),
     select: (i) => set({ selected: i }),
     toggleRide: (stops) => {
@@ -54,6 +59,7 @@ export function createLifecycleStore(): LifecycleStore {
     },
     land: () => set({ flight: null }),
     stopFollowing: () => set({ follow: false, flight: null }),
+    reset: () => set(initial),
   }));
 }
 
