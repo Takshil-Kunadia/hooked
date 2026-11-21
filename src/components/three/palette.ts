@@ -205,11 +205,6 @@ function subscribe(onChange: () => void): () => void {
 const currentId = (): PaletteId => (window.matchMedia(DARK_QUERY).matches ? "dusk" : "day");
 const serverId = (): PaletteId => "day";
 
-/** Day in a light colour scheme, Dusk in a dark one; follows the system setting live. */
-export function usePalette(): Palette {
-  return PALETTES[usePaletteId()];
-}
-
 /** Whether the system asks for a dark colour scheme ("dusk") or a light one ("day"). */
 export function usePaletteId(): PaletteId {
   return useSyncExternalStore(subscribe, currentId, serverId);
