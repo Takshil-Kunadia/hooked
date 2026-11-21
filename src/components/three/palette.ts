@@ -3,6 +3,7 @@ import { Color, SRGBColorSpace } from "three";
 import { toneCompensate } from "@/lib/design/tone";
 
 type PaletteId = "day" | "dusk";
+type MoodId = PaletteId | "mist" | "core";
 
 /** One tile's scene look (round 5's PALETTES, plus the ink its labels are printed in). */
 export interface Palette {
@@ -27,7 +28,7 @@ export interface Palette {
 }
 
 /** Round 5's values, verbatim. Fog distances are for its 52-unit desktop overview (see `fogScale`). */
-const PALETTES: Readonly<Record<PaletteId, Palette>> = {
+const PALETTES: Readonly<Record<MoodId, Palette>> = {
   day: {
     bg: "#F5F5F7",
     fogNear: 50,
@@ -68,7 +69,97 @@ const PALETTES: Readonly<Record<PaletteId, Palette>> = {
     labelInk: "#E6E9EF",
     labelMuted: "#8F949D",
   },
+  /** The lighting narrative between Day and Dusk: a misty blue morning, so the blend never goes grey. */
+  mist: {
+    bg: "#CBD5E6",
+    fogNear: 46,
+    fogFar: 106,
+    table: "#E4E9F2",
+    porcelain: "#F3F4F8",
+    line: "#3858E9",
+    lineGlow: 0.12,
+    env: 0.72,
+    key: 2.1,
+    keyColor: "#EEF2FF",
+    hemi: 0.46,
+    shadow: 0.24,
+    bloom: false,
+    waiting: "#97A0B3",
+    ring: "#3858E9",
+    head: 0.4,
+    labelInk: "#1d1d1f",
+    labelMuted: "#4a5263",
+  },
+  /** The lighting narrative's dark core (the database, the query): deeper than Dusk, the line glowing. */
+  core: {
+    bg: "#06070B",
+    fogNear: 36,
+    fogFar: 90,
+    table: "#0B0E14",
+    porcelain: "#C4CBD8",
+    line: "#6F8BFF",
+    lineGlow: 0.9,
+    env: 0.2,
+    key: 0.85,
+    keyColor: "#8EA1FF",
+    hemi: 0.14,
+    shadow: 0.5,
+    bloom: true,
+    waiting: "#3A4152",
+    ring: "#9DB2FF",
+    head: 2.0,
+    labelInk: "#E6E9EF",
+    labelMuted: "#8F949D",
+  },
 };
+
+const NUMERIC_KEYS = ["fogNear", "fogFar", "lineGlow", "env", "key", "hemi", "shadow", "head"] as const;
+const COLOUR_KEYS = [
+  "bg",
+  "table",
+  "porcelain",
+  "line",
+  "keyColor",
+  "waiting",
+  "ring",
+  "labelInk",
+  "labelMuted",
+] as const;
+
+const mixColour = (a: string, b: string, t: number): string => `#${new Color(a).lerp(new Color(b), t).getHexString()}`;
+
+/** A palette `t` of the way from `a` to `b`; bloom switches at the halfway point. */
+export function mixPalettes(a: Palette, b: Palette, t: number): Palette {
+  const k = Math.min(1, Math.max(0, t));
+  const numbers = Object.fromEntries(NUMERIC_KEYS.map((key) => [key, a[key] + (b[key] - a[key]) * k]));
+  const colours = Object.fromEntries(COLOUR_KEYS.map((key) => [key, mixColour(a[key], b[key], k)]));
+  return { ...a, ...numbers, ...colours, bloom: k < 0.5 ? a.bloom : b.bloom } as Palette;
+}
+
+/** The lighting narrative's stops: Day, a misty morning, Dusk, then the dark core. */
+const MOOD_STOPS: ReadonlyArray<readonly [number, Palette]> = [
+  [0, PALETTES.day],
+  [0.25, PALETTES.mist],
+  [0.5, PALETTES.dusk],
+  [1, PALETTES.core],
+];
+/** Bloom only once it is dark enough for glow to read as light, not glare. */
+const BLOOM_FROM = 0.6;
+
+/** The lighting narrative: 0 is Day, 0.25 mist, 0.5 Dusk and 1 the dark core, with blends between. */
+export function moodPalette(mood: number): Palette {
+  const m = Math.min(1, Math.max(0, mood));
+  let k = 1;
+  while (k < MOOD_STOPS.length - 1 && m > MOOD_STOPS[k]![0]) k++;
+  const [m0, a] = MOOD_STOPS[k - 1]!;
+  const [m1, b] = MOOD_STOPS[k]!;
+  return { ...mixPalettes(a, b, (m - m0) / (m1 - m0)), bloom: m >= BLOOM_FROM };
+}
+
+/** A soft sky for a palette: its background at the top, tinted towards its line colour lower down. */
+export function skyColours(palette: Palette): readonly [top: string, bottom: string] {
+  return [palette.bg, mixColour(palette.bg, palette.line, 0.16)];
+}
 
 /** Round 5's desktop overview distance, which its fog distances were tuned for. */
 const ROUND_5_OVERVIEW_DIST = 52;
@@ -116,5 +207,10 @@ const serverId = (): PaletteId => "day";
 
 /** Day in a light colour scheme, Dusk in a dark one; follows the system setting live. */
 export function usePalette(): Palette {
-  return PALETTES[useSyncExternalStore(subscribe, currentId, serverId)];
+  return PALETTES[usePaletteId()];
+}
+
+/** Whether the system asks for a dark colour scheme ("dusk") or a light one ("day"). */
+export function usePaletteId(): PaletteId {
+  return useSyncExternalStore(subscribe, currentId, serverId);
 }
